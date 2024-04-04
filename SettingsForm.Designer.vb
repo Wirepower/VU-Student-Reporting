@@ -385,11 +385,11 @@ Partial Class SettingsForm
         ' 
         ' Button10
         ' 
-        Button10.Location = New Point(492, 610)
+        Button10.Location = New Point(353, 610)
         Button10.Name = "Button10"
-        Button10.Size = New Size(137, 26)
+        Button10.Size = New Size(229, 26)
         Button10.TabIndex = 40
-        Button10.Text = "Update String"
+        Button10.Text = "Update String and Restart Application"
         Button10.UseVisualStyleBackColor = True
         ' 
         ' SettingsForm
