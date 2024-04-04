@@ -3,7 +3,8 @@ Imports System.Drawing
 Imports Microsoft.Data.SqlClient
 
 Module SQLCon
-    Public connectionString As String = "Server=DEVSQLCENTRAL.AD.VU.EDU.AU;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False;"
+    'Public connectionString As String = "Server=DEVSQLCENTRAL.AD.VU.EDU.AU;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False;"
+    Public connectionString As String = My.Settings.SQLConString
 
     Private statusLabel As Label ' Declare a private variable to hold the reference to the status label
 
@@ -17,7 +18,8 @@ Module SQLCon
             Return connection
         Catch ex As Exception
             MsgBox("Error creating connection: " & vbCrLf & ex.Message & vbCrLf & "Exiting Application!")
-            Environment.Exit(0)
+
+            'Environment.Exit(0)
             Return Nothing ' Return null or Nothing to indicate failure
         End Try
     End Function
@@ -31,7 +33,8 @@ Module SQLCon
         Catch ex As Exception
             MsgBox("Error opening connection: " & vbCrLf & ex.Message & vbCrLf & "Exiting Application!")
             UpdateStatusLabel("Error opening connection.", Color.Red)
-            Environment.Exit(0)
+
+            'Environment.Exit(0)
         End Try
     End Sub
 

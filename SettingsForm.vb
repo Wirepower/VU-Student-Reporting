@@ -4,6 +4,7 @@ Imports System.Data.SqlClient
 Imports System.IO
 Imports Microsoft.VisualBasic.core
 Imports System.ComponentModel
+'Imports Microsoft.SharePoint.Client
 
 Public Class SettingsForm
     Dim totalSteps As Integer = 100 ' Total number of steps
@@ -13,6 +14,8 @@ Public Class SettingsForm
     Private Const MaxHeight As Integer = 600
     Dim dataSet As New DataSet()
     Private Sub Settings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        Dim SqlConString As String = My.Settings.SQLConString
+        TextBox5.Text = SqlConString
         ' Load initial email addresses from the database and display them in TextBoxes
         LoadCurrentSettings()
         PopulateTeacherComboBox()
@@ -590,15 +593,40 @@ Public Class SettingsForm
 
 
     Private Sub Button5_Click(sender As Object, e As EventArgs) Handles Button5.Click
+        Dim ColumnsConfirmed As MsgBoxResult
+
+        ColumnsConfirmed = MsgBox("Have you made sure that the following columns exist?" & vbCrLf & " Student ID " & vbCrLf & " Study Package Code " & vbCrLf & " Grade Code " & vbCrLf & " Student Study Package Status", vbYesNo)
+
+        If ColumnsConfirmed = vbNo Then
+            Exit Sub ' If columns are not confirmed, exit the subroutine
+        End If
+
+        Dim conversionConfirmed As MsgBoxResult
+
+        conversionConfirmed = MsgBox("Have you converted this to a 'CSV comma delimited' file?", vbYesNo)
+
+        If conversionConfirmed = vbNo Then
+            Exit Sub ' If conversion is not confirmed, exit the subroutine
+        End If
+
         ' Open a file dialog to select the CSV file
         Dim openFileDialog As New OpenFileDialog()
         openFileDialog.Filter = "CSV files (*.csv)|*.csv"
         openFileDialog.Title = "Select a CSV File"
 
+        Dim loadingForm As New LoadingForm()
+        loadingForm.Show()
+        ' Define custom increments
+        Dim totalSteps As Integer = 100 ' Total number of steps
+        Dim currentStep As Integer = 15  ' Current step
+
         If openFileDialog.ShowDialog() = DialogResult.OK Then
+            currentStep = 30
             ' Read CSV data into the DataSet
             ReadCsvIntoDataSet(openFileDialog.FileName, dataSet)
-
+            currentStep = 50
+            ' Update progress bar to reflect current progress
+            loadingForm.UpdateProgress(currentStep)
             ' Filter the DataSet
             FilterDataSet(dataSet)
 
@@ -614,9 +642,15 @@ Public Class SettingsForm
             ' Upload filtered data to SQL database
             UploadToDatabase(dataSet)
         End If
+        currentStep = 80
+        ' Update progress bar to reflect current progress
+        loadingForm.UpdateProgress(currentStep)
         UpdateDatabaseUpdateDate()
         UpdateStudentLogs()
-
+        MainFrm.ResetInvestigation()
+        loadingForm.Label1.Text = "Loading Complete!"
+        loadingForm.UpdateProgress(totalSteps)
+        loadingForm.Close()
     End Sub
     Private Sub UpdateDatabaseUpdateDate()
         ' Construct the SQL query to update or insert the date
@@ -1139,5 +1173,56 @@ Public Class SettingsForm
 
     Private Sub txtAdminEmail_TextChanged(sender As Object, e As EventArgs) Handles txtAdminEmail.TextChanged
 
+    End Sub
+
+    Private Sub Button9_Click(sender As Object, e As EventArgs) Handles Button9.Click
+        Try
+            Using connection As New SqlConnection(connectionString)
+                connection.Open()
+
+                ' Define the SQL command to update column values
+                Dim commandText As String = "
+                    UPDATE ElectrotechnologyReports.dbo.StudentLogs
+                    SET Yearly_Early_Departure = '0',
+                        Yearly_Absent = '0',
+                        Yearly_Late_Arrival = '0'
+                "
+
+                ' Execute the SQL command
+                Using command As New SqlCommand(commandText, connection)
+                    command.ExecuteNonQuery()
+                End Using
+
+                MessageBox.Show("All Yearly logs reset successfully.")
+            End Using
+        Catch ex As Exception
+            MessageBox.Show("An error occurred: " & ex.Message)
+        End Try
+    End Sub
+
+    Private Sub Button10_Click(sender As Object, e As EventArgs) Handles Button10.Click
+        My.Settings.SQLConString = TextBox5.Text
+        My.Settings.Save()
+        TextBox5.Text = My.Settings.SQLConString
+
+        ' Display a message box asking the user if they want to restart the application
+        Dim answer As MsgBoxResult
+        answer = MsgBox("Application will now restart. Proceed?", MsgBoxStyle.YesNo)
+
+        ' Check the user's response
+        If answer = MsgBoxResult.Yes Then
+            ' Restart the application
+            RestartApplication()
+        Else
+            ' User chose not to restart, so exit the sub
+            Exit Sub
+        End If
+
+    End Sub
+    Private Sub RestartApplication()
+        Dim applicationPath As String = Application.ExecutablePath
+        Dim processInfo As ProcessStartInfo = New ProcessStartInfo(applicationPath)
+        Process.Start(processInfo)
+        Application.Exit()
     End Sub
 End Class

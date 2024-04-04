@@ -68,147 +68,151 @@ Public Class MainFrm
         End If
     End Function
     Private Sub MainFrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-
+        Dim loadingForm As New LoadingForm()
+        loadingForm.Show()
+        ' Define custom increments
+        Dim totalSteps As Integer = 100 ' Total number of steps
+        Dim currentStep As Integer = 5  ' Current step
         ' Initialize the status label
         SQLCon.InitializeStatusLabel(StatusLbl)
         ' Get the SQL connection
         connection = SQLCon.GetConnection()
         ' Open the connection
         SQLCon.OpenConnection(connection)
-        If Not IsOutlookInstalled() Then
-            MessageBox.Show("Microsoft Outlook is not detected on this system. This application requires Outlook to be installed in order to function properly. Please install Microsoft Outlook and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-            Me.Close()
-        End If
-
-        ' Check if the Cisco AnyConnect process is running
-        If IsAnyConnectRunning() Then
-            ' AnyConnect is running, prompt the user to connect
-            Dim result As DialogResult = MessageBox.Show("For security reasons, this application requires a VPN connection. Please ensure you are connected to Cisco AnyConnect VPN before using the application. Do you want to proceed anyway?", "VPN Connection Required", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
-
-            If result = DialogResult.No Then
-                'MsgBox("User Selected No")
-                ' User chose "No", close the application
+        If connection.State = ConnectionState.Open Then
+            If Not IsOutlookInstalled() Then
+                MessageBox.Show("Microsoft Outlook is not detected on this system. This application requires Outlook to be installed in order to function properly. Please install Microsoft Outlook and try again.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
                 Me.Close()
             End If
-        Else
-            ' AnyConnect is not running, prompt the user to connect
-            Dim result As DialogResult = MessageBox.Show("For security reasons, this application requires a VPN connection. Please ensure you are connected to Cisco AnyConnect VPN before using the application. Do you want to proceed anyway?", "VPN Connection Required", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
 
-            If result = DialogResult.No Then
-                'MsgBox("User Selected No")
-                ' User chose "No", close the application
-                Me.Close()
-            End If
-        End If
+            ' Check if the Cisco AnyConnect process is running
+            If IsAnyConnectRunning() Then
+                ' AnyConnect is running, prompt the user to connect
+                Dim result As DialogResult = MessageBox.Show("For security reasons, this application requires a VPN connection. Please ensure you are connected to Cisco AnyConnect VPN before using the application. Do you want to proceed anyway?", "VPN Connection Required", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
 
-        Dim directoryPath As String = "P:\VUPoly\MT&T\IT, Electrical and Engineering\Student Reporting Database\"
-
-        If Not Directory.Exists(directoryPath) Then
-            MessageBox.Show("Notification: Access to P-Drive Unavailable" & vbCrLf & vbCrLf & "It appears that access to the P-Drive directory is currently unavailable. We recommend reaching out to your IT department for further assistance." & vbCrLf & vbCrLf & "Please note that while this program will continue to operate without access to the P-Drive directory, it is essential to recognize that you will lose the capability to receive software updates.", "P-Drive Access Unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning)
-        End If
-
-        ' Set visibility of reconnect button
-        btnReconnect.Visible = (connection.State = ConnectionState.Closed)
-        ' Configure the timer control
-        connectionCheckTimer.Interval = 1000 ' 1 second interval
-        connectionCheckTimer.Start()
-        UpdateReconnectButtonVisibility()
-        ' Show the loading form
-        Dim loadingForm As New LoadingForm()
-        loadingForm.Show()
-        ' Define custom increments
-        Dim totalSteps As Integer = 100 ' Total number of steps
-        Dim currentStep As Integer = 5  ' Current step
-        ' Populate the ComboBox with unique values from the "Block Group Code" column
-        PopulateWeekdays()
-        PopulateBlockGroupCB()
-        PopulateTeacherComboBox()
-        PopulateEmailSubjectComboBox()
-        ResetApptrainData()
-        'Put Code here - Load Form/application
-
-        currentStep = 25
-        ' Update progress bar to reflect current progress
-        loadingForm.UpdateProgress(currentStep)
-
-        'Put Code here - Load Agreements database
-
-        currentStep = 50
-        ' Update progress bar to reflect current progress
-        loadingForm.UpdateProgress(currentStep)
-
-        'Put Code here - Load studentlog Database
-
-        currentStep = 75
-        ' Update progress bar to reflect current progress
-        loadingForm.UpdateProgress(currentStep)
-        System.Windows.Forms.Application.DoEvents()
-        loadingForm.Label1.Text = "Intializing Databases.. Please Wait"
-        ' Initialize Excel objects
-
-
-
-        'Put Code here - Load Unit Database
-
-
-        Button8.Visible = False
-        Button7.Visible = False
-        Button3.Visible = False
-        System.Windows.Forms.Application.DoEvents()
-        currentStep = 90
-        ' Update progress bar to reflect current progress
-        loadingForm.UpdateProgress(currentStep)
-
-        'Put Code here - Load Teacher Database
-
-        ComboBox4.Items.Add("Satisfactory")
-        ComboBox4.Items.Add("Not Satisfactory")
-
-        ComboBox5.Items.Add("Satisfactory")
-        ComboBox5.Items.Add("Not Satisfactory")
-
-        ComboBox6.Items.Add("Satisfactory")
-        ComboBox6.Items.Add("Not Satisfactory")
-
-        ComboBox4.Text = ""
-        ComboBox5.Text = ""
-        ComboBox6.Text = ""
-        VersionLBL.Text = Version
-        '-------
-        SettingsForm.MassEmailChkBx.Checked = My.Settings.MassEmail
-        ' Retrieve the stored state of the checkbox from application settings
-        SettingsForm.MassEmailChkBx.Checked = My.Settings.MassEmail
-
-        ' Get the initial visibility of the MassEmailBtn button based on the checkbox state
-        If SettingsForm.MassEmailChkBx.Checked Then
-            MassEmailBtn.Visible = True
-        Else
-            MassEmailBtn.Visible = False
-        End If
-        '-------
-
-        System.Windows.Forms.Application.DoEvents()
-        loadingForm.Label1.Text = "Loading Complete!"
-        loadingForm.UpdateProgress(totalSteps)
-        ' Simulate a delay
-        System.Threading.Thread.Sleep(1000)
-        'CheckVersionAndDisplayInfo()
-        ' Close the loading form once loading is finished
-        loadingForm.Close()
-
-        ' Check for updates when the form loads
-        If UpdateModule.IsUpdateAvailable() Then
-            ' Prompt the user to update
-            Dim result As DialogResult = MessageBox.Show("An update Is available. Do you want to download And install it?", "Update Available", MessageBoxButtons.YesNo)
-            If result = DialogResult.Yes Then
-                ' Implement download and install update logic here if user chooses to update
-                ' For example, call a method to download and install the update
-                DownloadAndUpdate()
+                If result = DialogResult.No Then
+                    'MsgBox("User Selected No")
+                    ' User chose "No", close the application
+                    Me.Close()
+                End If
             Else
-                ' Continue loading the form or perform other actions if no update is available
-            End If
-        End If
+                ' AnyConnect is not running, prompt the user to connect
+                Dim result As DialogResult = MessageBox.Show("For security reasons, this application requires a VPN connection. Please ensure you are connected to Cisco AnyConnect VPN before using the application. Do you want to proceed anyway?", "VPN Connection Required", MessageBoxButtons.YesNo, MessageBoxIcon.Warning)
 
+                If result = DialogResult.No Then
+                    'MsgBox("User Selected No")
+                    ' User chose "No", close the application
+                    Me.Close()
+                End If
+            End If
+
+            Dim directoryPath As String = "P:\VUPoly\MT&T\IT, Electrical and Engineering\Student Reporting Database\"
+
+            If Not Directory.Exists(directoryPath) Then
+                MessageBox.Show("Notification: Access to P-Drive Unavailable" & vbCrLf & vbCrLf & "It appears that access to the P-Drive directory is currently unavailable. We recommend reaching out to your IT department for further assistance." & vbCrLf & vbCrLf & "Please note that while this program will continue to operate without access to the P-Drive directory, it is essential to recognize that you will lose the capability to receive software updates.", "P-Drive Access Unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            End If
+
+            ' Set visibility of reconnect button
+            btnReconnect.Visible = (connection.State = ConnectionState.Closed)
+            ' Configure the timer control
+            connectionCheckTimer.Interval = 1000 ' 1 second interval
+            connectionCheckTimer.Start()
+            UpdateReconnectButtonVisibility()
+            ' Show the loading form
+
+            ' Populate the ComboBox with unique values from the "Block Group Code" column
+            PopulateWeekdays()
+            PopulateBlockGroupCB()
+            PopulateTeacherComboBox()
+            PopulateEmailSubjectComboBox()
+            ResetApptrainData()
+            'Put Code here - Load Form/application
+
+            currentStep = 25
+            ' Update progress bar to reflect current progress
+            loadingForm.UpdateProgress(currentStep)
+
+            'Put Code here - Load Agreements database
+
+            currentStep = 50
+            ' Update progress bar to reflect current progress
+            loadingForm.UpdateProgress(currentStep)
+
+            'Put Code here - Load studentlog Database
+
+            currentStep = 75
+            ' Update progress bar to reflect current progress
+            loadingForm.UpdateProgress(currentStep)
+            System.Windows.Forms.Application.DoEvents()
+            loadingForm.Label1.Text = "Intializing Databases.. Please Wait"
+            ' Initialize Excel objects
+
+
+
+            'Put Code here - Load Unit Database
+
+
+            Button8.Visible = False
+            Button7.Visible = False
+            Button3.Visible = False
+            System.Windows.Forms.Application.DoEvents()
+            currentStep = 90
+            ' Update progress bar to reflect current progress
+            loadingForm.UpdateProgress(currentStep)
+
+            'Put Code here - Load Teacher Database
+
+            ComboBox4.Items.Add("Satisfactory")
+            ComboBox4.Items.Add("Not Satisfactory")
+
+            ComboBox5.Items.Add("Satisfactory")
+            ComboBox5.Items.Add("Not Satisfactory")
+
+            ComboBox6.Items.Add("Satisfactory")
+            ComboBox6.Items.Add("Not Satisfactory")
+
+            ComboBox4.Text = ""
+            ComboBox5.Text = ""
+            ComboBox6.Text = ""
+            VersionLBL.Text = Version
+            '-------
+            SettingsForm.MassEmailChkBx.Checked = My.Settings.MassEmail
+            ' Retrieve the stored state of the checkbox from application settings
+            SettingsForm.MassEmailChkBx.Checked = My.Settings.MassEmail
+
+            ' Get the initial visibility of the MassEmailBtn button based on the checkbox state
+            If SettingsForm.MassEmailChkBx.Checked Then
+                MassEmailBtn.Visible = True
+            Else
+                MassEmailBtn.Visible = False
+            End If
+            '-------
+
+            System.Windows.Forms.Application.DoEvents()
+            loadingForm.Label1.Text = "Loading Complete!"
+            loadingForm.UpdateProgress(totalSteps)
+            ' Simulate a delay
+            System.Threading.Thread.Sleep(1000)
+            'CheckVersionAndDisplayInfo()
+            ' Close the loading form once loading is finished
+            loadingForm.Close()
+
+            ' Check for updates when the form loads
+            If UpdateModule.IsUpdateAvailable() Then
+                ' Prompt the user to update
+                Dim result As DialogResult = MessageBox.Show("An update Is available. Do you want to download And install it?", "Update Available", MessageBoxButtons.YesNo)
+                If result = DialogResult.Yes Then
+                    ' Implement download and install update logic here if user chooses to update
+                    ' For example, call a method to download and install the update
+                    DownloadAndUpdate()
+                Else
+                    ' Continue loading the form or perform other actions if no update is available
+                End If
+            End If
+        Else
+            Me.Hide()
+            SQLError.Show()
+        End If
     End Sub
 
     'Private Sub CheckConnections()

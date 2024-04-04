@@ -27,15 +27,24 @@ Public Class Admin
         openFileDialog.Filter = "CSV files (*.csv)|*.csv"
         openFileDialog.Title = "Select a CSV File"
 
-        If openFileDialog.ShowDialog() = DialogResult.OK Then
-            ' Read CSV data into the DataSet
-            ReadCsvIntoDataSet(openFileDialog.FileName, DataSet)
+        Dim loadingForm As New LoadingForm()
+        loadingForm.Show()
+        ' Define custom increments
+        Dim totalSteps As Integer = 100 ' Total number of steps
+        Dim currentStep As Integer = 15  ' Current step
 
+        If openFileDialog.ShowDialog() = DialogResult.OK Then
+            currentStep = 30
+            ' Read CSV data into the DataSet
+            ReadCsvIntoDataSet(openFileDialog.FileName, dataSet)
+            currentStep = 50
+            ' Update progress bar to reflect current progress
+            loadingForm.UpdateProgress(currentStep)
             ' Filter the DataSet
-            FilterDataSet(DataSet)
+            FilterDataSet(dataSet)
 
             ' Display the filtered data
-            DataGridView1.DataSource = DataSet.Tables(0)
+            DataGridView1.DataSource = dataSet.Tables(0)
 
             ' Show only specific columns in the DataGridView
             Dim visibleColumns As String() = {"Student ID", "Study Package Code", "Grade Code", "Student Study Package Status"}
@@ -44,10 +53,17 @@ Public Class Admin
             Next
 
             ' Upload filtered data to SQL database
-            UploadToDatabase(DataSet)
+            UploadToDatabase(dataSet)
         End If
+        currentStep = 80
+        ' Update progress bar to reflect current progress
+        loadingForm.UpdateProgress(currentStep)
         UpdateDatabaseUpdateDate()
         UpdateStudentLogs()
+        MainFrm.ResetInvestigation()
+        loadingForm.Label1.Text = "Loading Complete!"
+        loadingForm.UpdateProgress(totalSteps)
+        loadingForm.Close()
     End Sub
     Private Sub LoadCurrentSettings()
         ' Retrieve and display the current email settings in the form fields

@@ -64,6 +64,20 @@ Namespace My
                 Me("MassEmail") = value
             End Set
         End Property
+        
+        <Global.System.Configuration.UserScopedSettingAttribute(),  _
+         Global.System.Diagnostics.DebuggerNonUserCodeAttribute(),  _
+         Global.System.Configuration.DefaultSettingValueAttribute("Server=DEVSQLCENTRAL.AD.VU.EDU.AU, 1433;Integrated Security=True;Connect Timeout="& _ 
+            "30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi"& _ 
+            " Subnet Failover=False;")>  _
+        Public Property SQLConString() As String
+            Get
+                Return CType(Me("SQLConString"),String)
+            End Get
+            Set
+                Me("SQLConString") = value
+            End Set
+        End Property
     End Class
 End Namespace
 

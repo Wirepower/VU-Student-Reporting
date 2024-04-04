@@ -5,5 +5,8 @@
     <Setting Name="MassEmail" GenerateDefaultValueInCode="false" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
+    <Setting Name="SQLConString" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Server=DEVSQLCENTRAL.AD.VU.EDU.AU, 1433;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False;</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
