@@ -1,9 +1,9 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class SQLError
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
-    <System.Diagnostics.DebuggerNonUserCode()> _
+    <System.Diagnostics.DebuggerNonUserCode()>
     Protected Overrides Sub Dispose(ByVal disposing As Boolean)
         Try
             If disposing AndAlso components IsNot Nothing Then
@@ -20,7 +20,7 @@ Partial Class SQLError
     'NOTE: The following procedure is required by the Windows Form Designer
     'It can be modified using the Windows Form Designer.  
     'Do not modify it using the code editor.
-    <System.Diagnostics.DebuggerStepThrough()> _
+    <System.Diagnostics.DebuggerStepThrough()>
     Private Sub InitializeComponent()
         Button10 = New Button()
         Label12 = New Label()
@@ -32,9 +32,8 @@ Partial Class SQLError
         ' 
         Button10.Location = New Point(546, 207)
         Button10.Name = "Button10"
-        Button10.Size = New Size(137, 44)
+        Button10.Size = New Size(162, 44)
         Button10.TabIndex = 43
-        Button10.Text = "Update String"
         Button10.UseVisualStyleBackColor = True
         ' 
         ' Label12
@@ -66,7 +65,7 @@ Partial Class SQLError
         ' 
         ' SQLError
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
+        AutoScaleDimensions = New SizeF(7.0F, 15.0F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(1295, 263)
         Controls.Add(Label1)
