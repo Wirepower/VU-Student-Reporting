@@ -32,9 +32,9 @@ Partial Class SQLError
         ' 
         Button10.Location = New Point(546, 207)
         Button10.Name = "Button10"
-        Button10.Size = New Size(137, 44)
+        Button10.Size = New Size(144, 44)
         Button10.TabIndex = 43
-        Button10.Text = "Update String"
+        Button10.Text = "Update String and Restart Application"
         Button10.UseVisualStyleBackColor = True
         ' 
         ' Label12
