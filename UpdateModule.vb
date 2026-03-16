@@ -47,7 +47,14 @@ End Class
 Module UpdateModule
     Private Const GitHubOwner As String = "Wirepower"
     Private Const GitHubRepo As String = "VU-Student-Reporting"
-    Public Const CurrentReleaseTag As String = "v2.0sql"
+    ''' <summary>Current release tag derived from assembly version. Set &lt;AssemblyVersion&gt; in the .vbproj for each release.</summary>
+    Public ReadOnly Property CurrentReleaseTag As String
+        Get
+            Dim v As Version = Assembly.GetExecutingAssembly().GetName().Version
+            If v Is Nothing Then Return "v0.0"
+            Return "v" & v.Major.ToString() & "." & v.Minor.ToString()
+        End Get
+    End Property
 
     Private Function GetLatestVersionFromDatabase() As Version
         Dim connectionString As String = SQLCon.connectionString
@@ -159,7 +166,7 @@ Module UpdateModule
         If checkResult Is Nothing OrElse checkResult.PreferredAsset Is Nothing Then
             Return New GitHubUpdateInstallResult With {
                 .IsSuccessful = False,
-                .ErrorMessage = "No downloadable release asset is available for this update."
+                .ErrorMessage = "No installer is attached to this release. Upload an .exe or .msi to the release to enable one-click update."
             }
         End If
 
@@ -392,15 +399,18 @@ Module UpdateModule
             Return False
         End If
 
+        ' Same tag string = no update
         If String.Equals(currentTag.Trim(), latestTag.Trim(), StringComparison.OrdinalIgnoreCase) Then
             Return False
         End If
 
         Dim comparison As Integer
         If TryCompareReleaseTags(currentTag, latestTag, comparison) Then
-            Return comparison < 0
+            ' Numerically newer = update; same number but different tag (e.g. v2.0old vs v2.0sql) = update available
+            Return comparison <= 0
         End If
 
+        ' Could not compare (e.g. non-numeric tags): different tag = treat as update available
         Return True
     End Function
 
