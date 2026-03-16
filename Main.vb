@@ -15,11 +15,16 @@ Imports System.Windows.Forms.VisualStyles.VisualStyleElement.Tab
 
 
 Public Class MainFrm
-    Dim VersionV As String = "V"
-    Dim VersionN As String = "2.0"
-    Dim VersionA As String = " SQL"
+    ''' <summary>Display version derived from assembly version (set in .vbproj). Keeps UI in sync with update check.</summary>
+    Private ReadOnly Property Version As String
+        Get
+            Dim v As System.Version = System.Reflection.Assembly.GetExecutingAssembly().GetName().Version
+            If v Is Nothing Then Return "V0.0"
+            Return "V" & v.Major.ToString() & "." & v.Minor.ToString()
+        End Get
+    End Property
+
     Private connection As SqlConnection
-    Dim Version As String = VersionV & VersionN & VersionA
     Private WithEvents connectionCheckTimer As New Timer()
     Public studentID As String
     Public studentFirstname As String
@@ -200,8 +205,8 @@ Public Class MainFrm
             ' Close the loading form once loading is finished
             loadingForm.Close()
 
-            ' Stage 2 OTA: check for mandatory updates on startup.
-            CheckForUpdatesAsync(showNoUpdateMessage:=False).GetAwaiter().GetResult()
+            ' Stage 2 OTA: check for updates on startup (async so UI thread is not blocked and main form can appear).
+            BeginInvoke(New MethodInvoker(Sub() RunStartupUpdateCheckAsync()))
         Else
             Me.Hide()
             SQLError.Show()
@@ -228,6 +233,11 @@ Public Class MainFrm
             ' Handle any errors that occur during the download or execution
             MessageBox.Show("An error occurred while downloading or executing the update.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+    End Sub
+
+    ''' <summary>Runs the startup update check without blocking the form load (avoids deadlock).</summary>
+    Private Async Sub RunStartupUpdateCheckAsync()
+        Await CheckForUpdatesAsync(showNoUpdateMessage:=False)
     End Sub
 
     Private Async Function CheckForUpdatesAsync(showNoUpdateMessage As Boolean) As Task
@@ -267,14 +277,10 @@ Public Class MainFrm
                 End If
 
                 If gitHubResult.IsUpdateAvailable Then
-                    Dim releaseUrl As String = If(String.IsNullOrWhiteSpace(gitHubResult.LatestRelease?.HtmlUrl),
-                                                  "https://github.com/Wirepower/VU-Student-Reporting/releases",
-                                                  gitHubResult.LatestRelease.HtmlUrl)
                     Dim promptResult As DialogResult = MessageBox.Show(
-                        "A newer GitHub release is available." & vbCrLf &
-                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
-                        "Latest release: " & latestTag & vbCrLf & vbCrLf &
-                        "Release notes: " & releaseUrl & vbCrLf & vbCrLf &
+                        "A newer version is available." & vbCrLf &
+                        "Current version: " & gitHubResult.CurrentTag & vbCrLf &
+                        "Latest version: " & latestTag & vbCrLf & vbCrLf &
                         "Do you want to download and launch this update now?",
                         "Update Available",
                         MessageBoxButtons.YesNo,
@@ -296,7 +302,7 @@ Public Class MainFrm
 
                 If showNoUpdateMessage Then
                     MessageBox.Show(
-                        "You are currently on the latest configured release tag (" & gitHubResult.CurrentTag & ").",
+                        "You have the latest version (" & gitHubResult.CurrentTag & ").",
                         "No Update Available",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
@@ -316,7 +322,7 @@ Public Class MainFrm
                 DownloadAndUpdate()
             End If
         ElseIf showNoUpdateMessage Then
-            MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show("No updates found.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
     End Function
 

@@ -9,8 +9,8 @@
     <MyType>WindowsForms</MyType>
     <ImportedNamespaces>System.Data=False,System.Data.Common=False,System.Data.Odbc=False,System.Data.OleDb=False,System.Data.OracleClient=False,System.Data.SqlClient=False,System.Data.SqlTypes=False,System.Drawing=False,System.Windows.Forms=False,Microsoft.VisualBasic=True,System=True,System.Collections=True,System.Collections.Generic=True,System.Diagnostics=True,System.Linq=True,System.Xml.Linq=True,System.Threading.Tasks=True,Student Attendance Reporting=True</ImportedNamespaces>
     <Version>$(VersionPrefix)</Version>
-    <FileVersion>2.0</FileVersion>
-    <AssemblyVersion>2.0</AssemblyVersion>
+    <FileVersion>3.0</FileVersion>
+    <AssemblyVersion>3.0</AssemblyVersion>
   </PropertyGroup>
 
   <ItemGroup>
