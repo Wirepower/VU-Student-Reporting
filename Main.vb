@@ -115,6 +115,7 @@ Public Class MainFrm
 
             ' Set visibility of reconnect button
             btnReconnect.Visible = (connection.State = ConnectionState.Closed)
+            ConfigureResponsiveLayout()
             ' Configure the timer control
             connectionCheckTimer.Interval = 1000 ' 1 second interval
             connectionCheckTimer.Start()
@@ -324,6 +325,27 @@ Public Class MainFrm
             MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
     End Function
+
+    Private Sub ConfigureResponsiveLayout()
+        ' Keep the familiar layout, but improve resizing behavior.
+        Me.MinimumSize = New Size(1280, 900)
+
+        Button1.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Button2.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Button9.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        MassEmailBtn.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+
+        BlockGroupCB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        StudentIDTextBox.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Button6.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+
+        StudentCB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        GroupBox1.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        SelectedStudentLBL.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+
+        NotesTB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        Label14.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+    End Sub
 
     Private Sub SetProfilingApiStatus(statusText As String, detailText As String, Optional statusColor As Color? = Nothing)
         Label38.Text = "Profiling API:"
