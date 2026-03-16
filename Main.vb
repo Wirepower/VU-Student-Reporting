@@ -200,18 +200,8 @@ Public Class MainFrm
             ' Close the loading form once loading is finished
             loadingForm.Close()
 
-            ' Check for updates when the form loads
-            If UpdateModule.IsUpdateAvailable() Then
-                ' Prompt the user to update
-                Dim result As DialogResult = MessageBox.Show("An update Is available. Do you want to download And install it?", "Update Available", MessageBoxButtons.YesNo)
-                If result = DialogResult.Yes Then
-                    ' Implement download and install update logic here if user chooses to update
-                    ' For example, call a method to download and install the update
-                    DownloadAndUpdate()
-                Else
-                    ' Continue loading the form or perform other actions if no update is available
-                End If
-            End If
+            ' Stage 2 OTA: check for mandatory updates on startup.
+            CheckForUpdatesAsync(showNoUpdateMessage:=False).GetAwaiter().GetResult()
         Else
             Me.Hide()
             SQLError.Show()
@@ -240,36 +230,71 @@ Public Class MainFrm
         End Try
     End Sub
 
-    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        ' Stage 1 OTA foundation: check GitHub release status only.
+    Private Async Function CheckForUpdatesAsync(showNoUpdateMessage As Boolean) As Task
         Try
-            Dim gitHubResult As GitHubUpdateCheckResult = UpdateModule.CheckForGitHubUpdateAsync().GetAwaiter().GetResult()
+            Dim gitHubResult As GitHubUpdateCheckResult = Await UpdateModule.CheckForGitHubUpdateAsync()
             If gitHubResult.IsSuccessful Then
-                If gitHubResult.IsUpdateAvailable Then
-                    Dim latestTag As String = "(unknown)"
-                    Dim releaseUrl As String = "https://github.com/Wirepower/VU-Student-Reporting/releases"
+                Dim latestTag As String = If(gitHubResult.LatestRelease?.TagName, "(unknown)")
 
-                    If gitHubResult.LatestRelease IsNot Nothing Then
-                        If Not String.IsNullOrWhiteSpace(gitHubResult.LatestRelease.TagName) Then
-                            latestTag = gitHubResult.LatestRelease.TagName
-                        End If
+                If gitHubResult.IsMandatory Then
+                    MessageBox.Show(
+                        "A mandatory application update is required." & vbCrLf &
+                        gitHubResult.MandatoryReason & vbCrLf & vbCrLf &
+                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
+                        "Required/latest release: " & latestTag & vbCrLf & vbCrLf &
+                        "The updater will start now.",
+                        "Mandatory Update Required",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    )
 
-                        If Not String.IsNullOrWhiteSpace(gitHubResult.LatestRelease.HtmlUrl) Then
-                            releaseUrl = gitHubResult.LatestRelease.HtmlUrl
-                        End If
+                    Dim mandatoryInstall As GitHubUpdateInstallResult = Await UpdateModule.DownloadAndLaunchGitHubUpdateAsync(gitHubResult)
+                    If mandatoryInstall.IsSuccessful Then
+                        MessageBox.Show("Update launched successfully. The application will now close so the update can complete.", "Update In Progress", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    Else
+                        MessageBox.Show(
+                            "Unable to launch the mandatory updater." & vbCrLf &
+                            mandatoryInstall.ErrorMessage & vbCrLf & vbCrLf &
+                            "The application will now close to prevent running an out-of-date version.",
+                            "Mandatory Update Failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        )
                     End If
 
-                    MessageBox.Show(
+                    System.Windows.Forms.Application.Exit()
+                    Return
+                End If
+
+                If gitHubResult.IsUpdateAvailable Then
+                    Dim releaseUrl As String = If(String.IsNullOrWhiteSpace(gitHubResult.LatestRelease?.HtmlUrl),
+                                                  "https://github.com/Wirepower/VU-Student-Reporting/releases",
+                                                  gitHubResult.LatestRelease.HtmlUrl)
+                    Dim promptResult As DialogResult = MessageBox.Show(
                         "A newer GitHub release is available." & vbCrLf &
                         "Current release: " & gitHubResult.CurrentTag & vbCrLf &
                         "Latest release: " & latestTag & vbCrLf & vbCrLf &
                         "Release notes: " & releaseUrl & vbCrLf & vbCrLf &
-                        "Automatic install will be enabled in the next update step.",
+                        "Do you want to download and launch this update now?",
                         "Update Available",
-                        MessageBoxButtons.OK,
+                        MessageBoxButtons.YesNo,
                         MessageBoxIcon.Information
                     )
-                Else
+
+                    If promptResult = DialogResult.Yes Then
+                        Dim installResult As GitHubUpdateInstallResult = Await UpdateModule.DownloadAndLaunchGitHubUpdateAsync(gitHubResult)
+                        If installResult.IsSuccessful Then
+                            MessageBox.Show("Update launched successfully. The application will close so the update can complete.", "Update In Progress", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                            System.Windows.Forms.Application.Exit()
+                        Else
+                            MessageBox.Show("The update could not be launched." & vbCrLf & installResult.ErrorMessage, "Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        End If
+                    End If
+
+                    Return
+                End If
+
+                If showNoUpdateMessage Then
                     MessageBox.Show(
                         "You are currently on the latest configured release tag (" & gitHubResult.CurrentTag & ").",
                         "No Update Available",
@@ -290,9 +315,13 @@ Public Class MainFrm
             If result = DialogResult.Yes Then
                 DownloadAndUpdate()
             End If
-        Else
+        ElseIf showNoUpdateMessage Then
             MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
+    End Function
+
+    Private Async Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+        Await CheckForUpdatesAsync(showNoUpdateMessage:=True)
     End Sub
 
     Private Sub CheckVersionAndDisplayInfo()
