@@ -251,14 +251,10 @@ Public Class MainFrm
         Try
             Dim gitHubResult As GitHubUpdateCheckResult = Await UpdateModule.CheckForGitHubUpdateAsync()
             If gitHubResult.IsSuccessful Then
-                Dim latestTag As String = If(gitHubResult.LatestRelease?.TagName, "(unknown)")
-
                 If gitHubResult.IsMandatory Then
                     MessageBox.Show(
                         "A mandatory application update is required." & vbCrLf &
-                        gitHubResult.MandatoryReason & vbCrLf & vbCrLf &
-                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
-                        "Required/latest release: " & latestTag & vbCrLf & vbCrLf &
+                        "Please update now to continue using the application." & vbCrLf & vbCrLf &
                         "The updater will start now.",
                         "Mandatory Update Required",
                         MessageBoxButtons.OK,
@@ -286,8 +282,6 @@ Public Class MainFrm
                 If gitHubResult.IsUpdateAvailable Then
                     Dim promptResult As DialogResult = MessageBox.Show(
                         "A newer version is available." & vbCrLf &
-                        "Current version: " & gitHubResult.CurrentTag & vbCrLf &
-                        "Latest version: " & latestTag & vbCrLf & vbCrLf &
                         "Do you want to download and launch this update now?",
                         "Update Available",
                         MessageBoxButtons.YesNo,
@@ -309,7 +303,7 @@ Public Class MainFrm
 
                 If showNoUpdateMessage Then
                     MessageBox.Show(
-                        "You have the latest version (" & gitHubResult.CurrentTag & ").",
+                        "Your application is up to date.",
                         "No Update Available",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
@@ -329,7 +323,7 @@ Public Class MainFrm
                 DownloadAndUpdate()
             End If
         ElseIf showNoUpdateMessage Then
-            MessageBox.Show("No updates found.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show("Your application is up to date.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
     End Function
 
