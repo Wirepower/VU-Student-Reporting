@@ -32,6 +32,8 @@ Partial Class Admin
         DataGridView1 = New DataGridView()
         Button5 = New Button()
         btnCancel = New Button()
+        Label3 = New Label()
+        Label5 = New Label()
         CType(DataGridView1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -119,11 +121,31 @@ Partial Class Admin
         btnCancel.Text = "Close"
         btnCancel.UseVisualStyleBackColor = True
         ' 
+        ' Label3
+        ' 
+        Label3.AutoSize = True
+        Label3.Location = New Point(363, 82)
+        Label3.Name = "Label3"
+        Label3.Size = New Size(203, 15)
+        Label3.TabIndex = 25
+        Label3.Text = "Student Units Database Current as of:"
+        ' 
+        ' Label5
+        ' 
+        Label5.AutoSize = True
+        Label5.Location = New Point(572, 82)
+        Label5.Name = "Label5"
+        Label5.Size = New Size(31, 15)
+        Label5.TabIndex = 26
+        Label5.Text = "Date"
+        ' 
         ' Admin
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
         ClientSize = New Size(964, 698)
+        Controls.Add(Label5)
+        Controls.Add(Label3)
         Controls.Add(btnCancel)
         Controls.Add(DataGridView1)
         Controls.Add(Button5)
@@ -151,4 +173,6 @@ Partial Class Admin
     Friend WithEvents DataGridView1 As DataGridView
     Friend WithEvents Button5 As Button
     Friend WithEvents btnCancel As Button
+    Friend WithEvents Label3 As Label
+    Friend WithEvents Label5 As Label
 End Class

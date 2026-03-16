@@ -340,7 +340,7 @@ Public Class StudentUnits
 
     Private Sub CheckBox25_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox25.CheckedChanged
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
-        Dim columnName As String = "HTLTAID009" ' Replace with the corresponding column name
+        Dim columnName As String = "HLTAID009" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox25.Checked
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
@@ -427,6 +427,7 @@ Public Class StudentUnits
         End Using
     End Sub
     Private Sub StudentUnits_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+        VersionLBL.Text = MainFrm.VersionLBL.Text
         SelectedStudentLBL.Text = MainFrm.SelectedStudentLBL.Text
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -436,7 +437,10 @@ Public Class StudentUnits
         UpdateButtonVisibility()
         PopulateTeacherCombo()
         UpdateLabelWithDatabaseDate()
-
+        '-------------------------------------------------------------
+        'Enable below once Address column is working in SQL database
+        TextBox1.Text = MainFrm.Label28.Text
+        '-------------------------------------------------------------
         If CheckBox27.Checked And CheckBox29.Checked Then
             CheckBox41.Visible = True
 
@@ -548,15 +552,18 @@ Public Class StudentUnits
                     form.SetField("Email", MainFrm.StudentEmailLBL.Text)
                     form.SetField("Telephone", MainFrm.Label29.Text)
                     form.SetField("Epsilon", MainFrm.Label34.Text)
-
+                    form.SetField("Address", TextBox1.Text)
 
                     'Section 1
                     If CheckBox40.Checked Then
                         form.SetField("TeacherName", ComboBox1.Text)
                         form.SetField("Date", Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
+                        form.SetField("TeacherName2", "")
+                        form.SetField("Date2", "")
                     End If
+
+                    'Section 2
                     If CheckBox41.Checked Then
-                        'Section 2
                         form.SetField("TeacherName2", ComboBox1.Text)
                         form.SetField("Date2", Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
                     End If
@@ -623,4 +630,7 @@ Public Class StudentUnits
         UpdateButtonVisibility()
     End Sub
 
+    Private Sub ComboBox1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox1.SelectedIndexChanged
+
+    End Sub
 End Class

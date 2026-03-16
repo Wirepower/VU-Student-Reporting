@@ -30,10 +30,15 @@ Partial Class EmailTemplates
         Button3 = New Button()
         Button4 = New Button()
         Button5 = New Button()
+        TextBox2 = New TextBox()
+        Label2 = New Label()
+        Label3 = New Label()
+        Label4 = New Label()
         SuspendLayout()
         ' 
         ' ComboBox1
         ' 
+        ComboBox1.DropDownStyle = ComboBoxStyle.DropDownList
         ComboBox1.FormattingEnabled = True
         ComboBox1.Location = New Point(264, 78)
         ComboBox1.Name = "ComboBox1"
@@ -60,7 +65,7 @@ Partial Class EmailTemplates
         ' 
         ' Button1
         ' 
-        Button1.Location = New Point(277, 670)
+        Button1.Location = New Point(277, 882)
         Button1.Name = "Button1"
         Button1.Size = New Size(154, 50)
         Button1.TabIndex = 3
@@ -69,7 +74,7 @@ Partial Class EmailTemplates
         ' 
         ' Button2
         ' 
-        Button2.Location = New Point(25, 671)
+        Button2.Location = New Point(25, 883)
         Button2.Name = "Button2"
         Button2.Size = New Size(154, 50)
         Button2.TabIndex = 4
@@ -78,7 +83,7 @@ Partial Class EmailTemplates
         ' 
         ' Button3
         ' 
-        Button3.Location = New Point(796, 671)
+        Button3.Location = New Point(796, 883)
         Button3.Name = "Button3"
         Button3.Size = New Size(154, 49)
         Button3.TabIndex = 5
@@ -87,7 +92,7 @@ Partial Class EmailTemplates
         ' 
         ' Button4
         ' 
-        Button4.Location = New Point(535, 669)
+        Button4.Location = New Point(535, 881)
         Button4.Name = "Button4"
         Button4.Size = New Size(154, 51)
         Button4.TabIndex = 6
@@ -103,11 +108,50 @@ Partial Class EmailTemplates
         Button5.Text = "Close"
         Button5.UseVisualStyleBackColor = True
         ' 
+        ' TextBox2
+        ' 
+        TextBox2.Location = New Point(25, 697)
+        TextBox2.Multiline = True
+        TextBox2.Name = "TextBox2"
+        TextBox2.Size = New Size(925, 148)
+        TextBox2.TabIndex = 8
+        ' 
+        ' Label2
+        ' 
+        Label2.AutoSize = True
+        Label2.Location = New Point(25, 679)
+        Label2.Name = "Label2"
+        Label2.Size = New Size(88, 15)
+        Label2.TabIndex = 9
+        Label2.Text = "Email Help Text"
+        ' 
+        ' Label3
+        ' 
+        Label3.AutoSize = True
+        Label3.Location = New Point(23, 109)
+        Label3.Name = "Label3"
+        Label3.Size = New Size(90, 15)
+        Label3.TabIndex = 10
+        Label3.Text = "Email Body Text"
+        ' 
+        ' Label4
+        ' 
+        Label4.AutoSize = True
+        Label4.Location = New Point(156, 85)
+        Label4.Name = "Label4"
+        Label4.Size = New Size(102, 15)
+        Label4.TabIndex = 11
+        Label4.Text = "Email Subject Text"
+        ' 
         ' EmailTemplates
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(983, 746)
+        ClientSize = New Size(983, 959)
+        Controls.Add(Label4)
+        Controls.Add(Label3)
+        Controls.Add(Label2)
+        Controls.Add(TextBox2)
         Controls.Add(Button5)
         Controls.Add(Button4)
         Controls.Add(Button3)
@@ -130,4 +174,8 @@ Partial Class EmailTemplates
     Friend WithEvents Button3 As Button
     Friend WithEvents Button4 As Button
     Friend WithEvents Button5 As Button
+    Friend WithEvents TextBox2 As TextBox
+    Friend WithEvents Label2 As Label
+    Friend WithEvents Label3 As Label
+    Friend WithEvents Label4 As Label
 End Class
