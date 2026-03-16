@@ -240,14 +240,10 @@ Public Class MainFrm
         Try
             Dim gitHubResult As GitHubUpdateCheckResult = Await UpdateModule.CheckForGitHubUpdateAsync()
             If gitHubResult.IsSuccessful Then
-                Dim latestTag As String = If(gitHubResult.LatestRelease?.TagName, "(unknown)")
-
                 If gitHubResult.IsMandatory Then
                     MessageBox.Show(
                         "A mandatory application update is required." & vbCrLf &
-                        gitHubResult.MandatoryReason & vbCrLf & vbCrLf &
-                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
-                        "Required/latest release: " & latestTag & vbCrLf & vbCrLf &
+                        "Please update now to continue using the application." & vbCrLf & vbCrLf &
                         "The updater will start now.",
                         "Mandatory Update Required",
                         MessageBoxButtons.OK,
@@ -273,14 +269,8 @@ Public Class MainFrm
                 End If
 
                 If gitHubResult.IsUpdateAvailable Then
-                    Dim releaseUrl As String = If(String.IsNullOrWhiteSpace(gitHubResult.LatestRelease?.HtmlUrl),
-                                                  "https://github.com/Wirepower/VU-Student-Reporting/releases",
-                                                  gitHubResult.LatestRelease.HtmlUrl)
                     Dim promptResult As DialogResult = MessageBox.Show(
-                        "A newer GitHub release is available." & vbCrLf &
-                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
-                        "Latest release: " & latestTag & vbCrLf & vbCrLf &
-                        "Release notes: " & releaseUrl & vbCrLf & vbCrLf &
+                        "A newer version is available." & vbCrLf &
                         "Do you want to download and launch this update now?",
                         "Update Available",
                         MessageBoxButtons.YesNo,
@@ -302,7 +292,7 @@ Public Class MainFrm
 
                 If showNoUpdateMessage Then
                     MessageBox.Show(
-                        "You are currently on the latest configured release tag (" & gitHubResult.CurrentTag & ").",
+                        "Your application is up to date.",
                         "No Update Available",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information
@@ -322,7 +312,7 @@ Public Class MainFrm
                 DownloadAndUpdate()
             End If
         ElseIf showNoUpdateMessage Then
-            MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show("Your application is up to date.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
     End Function
 
