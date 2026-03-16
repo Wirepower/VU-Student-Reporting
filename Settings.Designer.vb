@@ -1,5 +1,5 @@
 ﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
-Partial Class SettingsForm
+Partial Class Settings
     Inherits System.Windows.Forms.Form
 
     'Form overrides dispose to clean up the component list.
@@ -56,17 +56,6 @@ Partial Class SettingsForm
         Button7 = New Button()
         Button8 = New Button()
         MassEmailChkBx = New CheckBox()
-        Button9 = New Button()
-        TextBox5 = New TextBox()
-        Label12 = New Label()
-        Button10 = New Button()
-        Button11 = New Button()
-        Button12 = New Button()
-        Label13 = New Label()
-        Label14 = New Label()
-        Label15 = New Label()
-        Label16 = New Label()
-        Button13 = New Button()
         CType(DataGridView1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -113,9 +102,9 @@ Partial Class SettingsForm
         ' 
         ' btnCancel
         ' 
-        btnCancel.Location = New Point(630, 687)
+        btnCancel.Location = New Point(520, 640)
         btnCancel.Name = "btnCancel"
-        btnCancel.Size = New Size(177, 61)
+        btnCancel.Size = New Size(261, 49)
         btnCancel.TabIndex = 5
         btnCancel.Text = "Close"
         btnCancel.UseVisualStyleBackColor = True
@@ -132,13 +121,13 @@ Partial Class SettingsForm
         ' 
         ' Button1
         ' 
-        Button1.Location = New Point(79, 687)
+        Button1.Location = New Point(78, 626)
         Button1.Name = "Button1"
-        Button1.Size = New Size(95, 61)
+        Button1.Size = New Size(91, 49)
         Button1.TabIndex = 7
-        Button1.TabStop = False
-        Button1.Text = "Manual Reset AppTrain Data > 14days"
+        Button1.Text = "Reset AppTrain Data"
         Button1.UseVisualStyleBackColor = True
+        Button1.Visible = False
         ' 
         ' Button2
         ' 
@@ -364,120 +353,11 @@ Partial Class SettingsForm
         MassEmailChkBx.Text = "Enable MASS Blockgroup Emailing"
         MassEmailChkBx.UseVisualStyleBackColor = True
         ' 
-        ' Button9
-        ' 
-        Button9.Location = New Point(180, 687)
-        Button9.Name = "Button9"
-        Button9.Size = New Size(91, 61)
-        Button9.TabIndex = 37
-        Button9.Text = "Reset Yearly Logs"
-        Button9.UseVisualStyleBackColor = True
-        ' 
-        ' TextBox5
-        ' 
-        TextBox5.Location = New Point(79, 639)
-        TextBox5.Name = "TextBox5"
-        TextBox5.Size = New Size(1247, 23)
-        TextBox5.TabIndex = 38
-        TextBox5.TextAlign = HorizontalAlignment.Center
-        ' 
-        ' Label12
-        ' 
-        Label12.AutoSize = True
-        Label12.Location = New Point(79, 621)
-        Label12.Name = "Label12"
-        Label12.Size = New Size(127, 15)
-        Label12.TabIndex = 39
-        Label12.Text = "SQL Connection String"
-        ' 
-        ' Button10
-        ' 
-        Button10.Location = New Point(353, 610)
-        Button10.Name = "Button10"
-        Button10.Size = New Size(229, 26)
-        Button10.TabIndex = 40
-        Button10.Text = "Update String and Restart Application"
-        Button10.UseVisualStyleBackColor = True
-        ' 
-        ' Button11
-        ' 
-        Button11.Location = New Point(277, 688)
-        Button11.Name = "Button11"
-        Button11.Size = New Size(151, 59)
-        Button11.TabIndex = 41
-        Button11.Text = "Delete Students in StudentLogs that are not in AgreementDetails"
-        Button11.UseVisualStyleBackColor = True
-        ' 
-        ' Button12
-        ' 
-        Button12.Location = New Point(434, 689)
-        Button12.Name = "Button12"
-        Button12.Size = New Size(91, 59)
-        Button12.TabIndex = 42
-        Button12.Text = "Update Student Database Date"
-        Button12.UseVisualStyleBackColor = True
-        ' 
-        ' Label13
-        ' 
-        Label13.AutoSize = True
-        Label13.Location = New Point(371, 67)
-        Label13.Name = "Label13"
-        Label13.Size = New Size(173, 15)
-        Label13.TabIndex = 43
-        Label13.Text = "Student Database Current as of:"
-        ' 
-        ' Label14
-        ' 
-        Label14.AutoSize = True
-        Label14.Location = New Point(550, 67)
-        Label14.Name = "Label14"
-        Label14.Size = New Size(31, 15)
-        Label14.TabIndex = 44
-        Label14.Text = "Date"
-        ' 
-        ' Label15
-        ' 
-        Label15.AutoSize = True
-        Label15.Location = New Point(341, 85)
-        Label15.Name = "Label15"
-        Label15.Size = New Size(203, 15)
-        Label15.TabIndex = 45
-        Label15.Text = "Student Units Database Current as of:"
-        ' 
-        ' Label16
-        ' 
-        Label16.AutoSize = True
-        Label16.Location = New Point(550, 85)
-        Label16.Name = "Label16"
-        Label16.Size = New Size(31, 15)
-        Label16.TabIndex = 46
-        Label16.Text = "Date"
-        ' 
-        ' Button13
-        ' 
-        Button13.Location = New Point(179, 452)
-        Button13.Name = "Button13"
-        Button13.Size = New Size(260, 53)
-        Button13.TabIndex = 47
-        Button13.Text = "Upload AgreementsDetails to SQL"
-        Button13.UseVisualStyleBackColor = True
-        ' 
-        ' SettingsForm
+        ' Settings
         ' 
         AutoScaleDimensions = New SizeF(7F, 15F)
         AutoScaleMode = AutoScaleMode.Font
-        ClientSize = New Size(1338, 760)
-        Controls.Add(Button13)
-        Controls.Add(Label16)
-        Controls.Add(Label15)
-        Controls.Add(Label14)
-        Controls.Add(Label13)
-        Controls.Add(Button12)
-        Controls.Add(Button11)
-        Controls.Add(Button10)
-        Controls.Add(Label12)
-        Controls.Add(TextBox5)
-        Controls.Add(Button9)
+        ClientSize = New Size(1338, 701)
         Controls.Add(MassEmailChkBx)
         Controls.Add(Button8)
         Controls.Add(Button7)
@@ -512,7 +392,7 @@ Partial Class SettingsForm
         Controls.Add(Label1)
         Controls.Add(txtApptrainEmail)
         Controls.Add(txtAdminEmail)
-        Name = "SettingsForm"
+        Name = "Settings"
         Text = "Settings"
         CType(DataGridView1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)
@@ -553,15 +433,4 @@ Partial Class SettingsForm
     Friend WithEvents Button7 As Button
     Friend WithEvents Button8 As Button
     Friend WithEvents MassEmailChkBx As CheckBox
-    Friend WithEvents Button9 As Button
-    Friend WithEvents TextBox5 As TextBox
-    Friend WithEvents Label12 As Label
-    Friend WithEvents Button10 As Button
-    Friend WithEvents Button11 As Button
-    Friend WithEvents Button12 As Button
-    Friend WithEvents Label13 As Label
-    Friend WithEvents Label14 As Label
-    Friend WithEvents Label15 As Label
-    Friend WithEvents Label16 As Label
-    Friend WithEvents Button13 As Button
 End Class

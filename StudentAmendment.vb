@@ -5,8 +5,10 @@ Imports Microsoft.Data.SqlClient
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement
 Imports System.Windows.Forms.VisualStyles.VisualStyleElement.Button
 Imports Microsoft.Office.Server.UserProfiles
+Imports Microsoft.Office.Server.Search.WebControls
 
 Public Class StudentAmendment
+    Private connection As SqlConnection
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         Me.Close()
     End Sub
@@ -20,6 +22,8 @@ Public Class StudentAmendment
 
             ' Clear existing items in the ComboBox
             SubmittedbyCB.Items.Clear()
+            ComboBox3.Items.Clear()
+            ComboBox2.Items.Clear()
 
             ' SQL query to retrieve all teachers' names
             Dim query As String = "SELECT Teacher_Full_Name FROM ElectrotechnologyReports.dbo.TeacherList WHERE Highest_Certificate_Taught = 'Certificate III' ORDER BY Teacher_Full_Name ASC"
@@ -31,28 +35,112 @@ Public Class StudentAmendment
                     While reader.Read()
                         ' Add each teacher's name to the ComboBox
                         SubmittedbyCB.Items.Add(reader.GetString(0))
+                        ComboBox2.Items.Add(reader.GetString(0))
+                        ComboBox3.Items.Add(reader.GetString(0))
                     End While
                 End Using
             End Using
         End Using
     End Sub
+    ' Function to perform the lookup
+    Private Sub LookupTeacherEmail()
+        ' Initialize the result variable
+        Dim teacherID As String = ""
+
+        ' Database connection string
+        Dim connectionString As String = SQLCon.connectionString
+
+        ' SQL query to retrieve the email based on the selected teacher full name
+        Dim query As String = "SELECT Email FROM ElectrotechnologyReports.dbo.TeacherList WHERE Teacher_Full_Name = @TeacherFullName"
+
+        Try
+            ' Create a SqlConnection and SqlCommand objects
+            Using connection As New SqlConnection(connectionString)
+                Using command As New SqlCommand(query, connection)
+                    ' Add parameter for the selected teacher full name
+                    command.Parameters.AddWithValue("@TeacherFullName", ComboBox2.Text)
+
+                    ' Open the connection
+                    connection.Open()
+
+                    ' Execute the query and retrieve the email
+                    Dim result As Object = command.ExecuteScalar()
+                    If result IsNot Nothing Then
+                        ' Set the retrieved email to Label29.Text
+                        Label29.Text = result.ToString()
+                    Else
+                        ' If no matching teacher found, clear Label29.Text
+                        Label29.Text = ""
+                    End If
+                End Using
+            End Using
+        Catch ex As Exception
+            ' Handle exceptions
+            MessageBox.Show("Error retrieving teacher email: " & ex.Message)
+        End Try
+    End Sub
     Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
+        'If CheckBox1.Checked Then
+        'RemoveStudent = MsgBox("Has this been approved by Management?", vbYesNo)
+        'If vbYes Then
+        'End If
+        'Else
+        '   MsgBox("Please seek approval from Management before proceeding")
+        'End If
+        If CheckBox2.Checked Then
+            ' Ask for management approval
+            Dim moveApproval As MsgBoxResult = MsgBox("Has this been approved by Management?", vbYesNo, "Moving a Student")
+            If moveApproval = vbNo Then
+                MsgBox("Please seek approval from Management before proceeding.", vbOK)
+                Exit Sub
+            End If
+
+            ' Validate the proposed blockgroup student numbers
+            Dim studentNumbersValidation As MsgBoxResult = MsgBox("Are the proposed blockgroup " & ComboBox1.Text & " student numbers under 20 students?", vbYesNo, "Moving a Student")
+            If studentNumbersValidation = vbNo Then
+                MsgBox("Please validate proposed student numbers before proceeding.", vbOK)
+                Exit Sub
+            End If
+        End If
+
+        If CheckBox3.Checked Then
+            ' Ask for management approval
+            Dim addApproval As MsgBoxResult = MsgBox("Has this been approved by Management?", vbYesNo, "Adding a Student")
+            If addApproval = vbNo Then
+                MsgBox("Please seek approval from Management before proceeding.", vbOK)
+                Exit Sub
+            End If
+
+            ' Validate the proposed blockgroup student numbers
+            Dim studentNumbersValidation As MsgBoxResult = MsgBox("Are the proposed blockgroup " & ComboBox1.Text & " student numbers under 20 students?", vbYesNo, "Adding a Student")
+            If studentNumbersValidation = vbNo Then
+                MsgBox("Please validate proposed student numbers before proceeding.", vbOK)
+                Exit Sub
+            End If
+        End If
+
+
+
         Dim missingFields As String = ""
         Dim action As String = ""
-        If (ComboBox1.SelectedIndex = -1 AndAlso Not CheckBox1.Checked) OrElse
-    (ComboBox1.SelectedIndex <> -1 AndAlso CheckBox1.Checked) Then
-            ' Either a ComboBox selection is made or a Checkbox is checked, but not both
-            ' Add the missing field message to the string
-            missingFields &= "- Proposed Blockgroup Change or Delete the student Checkbox." & vbCrLf & "It cant be both!" & vbCrLf
-        End If
 
+        ' Check if both ComboBox and CheckBox are not selected or both are selected
+        'If (ComboBox1.SelectedIndex = -1 AndAlso Not CheckBox1.Checked) OrElse
+        '(ComboBox1.SelectedIndex <> -1 AndAlso CheckBox1.Checked) Then
+        'missingFields &= "- Proposed Blockgroup Change or Delete the student Checkbox." & vbCrLf & "It cant be both!" & vbCrLf
+        ' End If
+
+
+        ' Check which checkbox is checked
         If CheckBox1.Checked Then
-            ' Set the action variable to "DELETE"
             action = "deleted"
-        Else
+        ElseIf CheckBox2.Checked Then
             action = "changed"
+        ElseIf CheckBox3.Checked Then
+            action = "added"
         End If
 
+        ' Check for missing fields
         If DateTimePicker1.Text = "" Then
             missingFields &= "- Date" & vbCrLf
         End If
@@ -60,6 +148,8 @@ Public Class StudentAmendment
         If SubmittedbyCB.Text = "" Then
             missingFields &= "- Submitted By" & vbCrLf
         End If
+
+        ' If there are missing fields, display message and exit sub
         If missingFields <> "" Then
             MessageBox.Show("Please fill the following fields:" & vbCrLf & missingFields)
             Exit Sub
@@ -68,6 +158,7 @@ Public Class StudentAmendment
         Dim OutApp As Object
         Dim OutMail As Object
         Dim body As String
+        Dim body1 As String
         Dim AdminEmail As String
         Dim ApptrainEmail As String
         Dim FrankOffer As String
@@ -77,47 +168,75 @@ Public Class StudentAmendment
         ' Retrieve email addresses from the EmailSettings table
         GetEmailAddresses(AdminEmail, ApptrainEmail, FrankOffer, Trades)
 
-        ' Create a new instance of Outlook Application
-        Dim outlookApp As New Outlook.Application()
-
+        ' Construct the email body for the first email
         body = "Hello, <BR>
-I would like to get the following student blockgroup " & action & ". <BR><BR><BR>
-Student ID: " & Label3.Text & "<BR><BR>
-Student Name: " & Label4.Text & " " & Label5.Text & " <BR><BR>
-Student Email: " & Label6.Text & " <BR><BR>
-From BlockGroup: " & Label20.Text & " to Blockgroup: " & ComboBox1.Text & "<BR><BR>
-Starting from: " & DateTimePicker1.Text & "<BR><BR>
-Submitted by: " & SubmittedbyCB.Text & "<BR><BR>"
+    I would like to get the following student blockgroup " & action & ". <BR><BR><BR>
+    Student ID: " & Label3.Text & "<BR><BR>
+    Student Name: " & Label4.Text & " " & Label5.Text & " <BR><BR>
+    Student Email: " & Label6.Text & " <BR><BR>
+    From BlockGroup: " & Label20.Text & " to Blockgroup: " & ComboBox1.Text & "<BR><BR>
+    Starting from: " & DateTimePicker1.Text & "<BR><BR>
+    Submitted by: " & SubmittedbyCB.Text & "<BR><BR>"
 
-
-
+        ' Create a new instance of Outlook Application
         OutApp = CreateObject("Outlook.Application")
+
         ' Create a new email item
         OutMail = OutApp.CreateItem(0)
 
-        ' Set email properties
+        ' Set email properties for the first email
         With OutMail
-
-            .To = FrankOffer
+            .To = Trades
             .cc = AdminEmail
             .bcc = ""
             .Subject = "Student Amendment Request - ADD/MOVE/DELETE Student from Blockgroup"
-            .HTMLbody = Body & "<br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & MainFrm.VersionLBL.Text
+            .HTMLbody = body & "<br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & MainFrm.VersionLBL.Text
             .Display ' Display the email
-
-            ' Display the email
-            .Display(True)
-
-            ' Release COM objects
-            ReleaseComObject(outlookApp)
         End With
 
         ' Clean up
-        OutMail = Nothing
-        OutApp = Nothing
-        Me.Close()
+        ReleaseComObject(OutMail)
+        ReleaseComObject(OutApp)
+
+        ' Display confirmation message
         MsgBox("Your Email has been Generated!")
+
+        ' Check if the checkbox is checked to generate the second email
+        If CheckBox2.Checked Then
+            ' Construct the email body for the second email
+            body1 = "Dear, " & Label7.Text & " / " & Label4.Text & "<BR> 
+        I am writing to inform you that your apprentice, " & Label4.Text & " " & Label5.Text & ", will be transitioning to class " & ComboBox1.Text & "<BR>
+        The reason for this change: " & ComboBox4.Text & "<BR>
+        Classes Commence for this class on: " & DateTimePicker1.Text & " at 8:00AM<BR><BR>
+        Should you have any questions or require further clarification, please feel free to contact me by replying to this email.<BR><BR>" &
+        "Best regards,<BR>" & SubmittedbyCB.Text
+
+
+            ' Create a new instance of Outlook Application
+            OutApp = CreateObject("Outlook.Application")
+
+            ' Create a new email item
+            OutMail = OutApp.CreateItem(0)
+
+            ' Set email properties for the second email
+            With OutMail
+                .To = Label6.Text
+                .cc = Label10.Text
+                .bcc = ""
+                .Subject = "Notice: Change of Apprentice Class and/or Day"
+                .HTMLbody = body1 & "<br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & MainFrm.VersionLBL.Text
+                .Display ' Display the email
+            End With
+
+            ' Clean up
+            ReleaseComObject(OutMail)
+            ReleaseComObject(OutApp)
+
+            ' Display confirmation message
+            MsgBox("Employer/Student Email has been Generated!")
+        End If
     End Sub
+
 
     ' Method to release COM objects to prevent memory leaks
     Private Sub ReleaseComObject(ByVal obj As Object)
@@ -198,8 +317,8 @@ This message is auto-generated for your convenience."
         ' Set email properties
         With OutMail
 
-            .To = Trades
-            .cc = ""
+            .To = ApptrainEmail
+            .cc = Trades
             .bcc = ""
             .Subject = "Student Amendment Request - Incorrect Employer Information"
             .HTMLbody = body & "<br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & MainFrm.VersionLBL.Text
@@ -235,7 +354,7 @@ This message is auto-generated for your convenience."
                             Dim blockGroupCode As String = reader.GetString(0)
 
                             ' Remove non-numeric characters from the blockGroupCode
-                            blockGroupCode = New String(blockGroupCode.Where(Function(c) Char.IsDigit(c)).ToArray())
+                            'blockGroupCode = New String(blockGroupCode.Where(Function(c) Char.IsDigit(c)).ToArray())
 
                             ' Add the modified blockGroupCode to the ComboBox
                             ComboBox1.Items.Add(blockGroupCode)
@@ -246,4 +365,129 @@ This message is auto-generated for your convenience."
         End Using
     End Sub
 
+    Private Sub CheckBox2_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox2.CheckedChanged
+        If CheckBox2.Checked = True Then
+            Label24.Visible = True
+            ComboBox3.Visible = True
+            Label19.Visible = True
+            Label20.Visible = True
+            ComboBox4.Visible = True
+            Label26.Visible = True
+            ComboBox2.Visible = True
+            Label25.Visible = True
+            Label21.Visible = True
+            ComboBox1.Visible = True
+            Button3.Visible = True
+            Label28.Visible = False
+            Label22.Visible = True
+            DateTimePicker1.Visible = True
+            CheckBox1.Checked = False
+            CheckBox3.Checked = False
+        Else
+            Label24.Visible = False
+            ComboBox3.Visible = False
+            Label19.Visible = False
+            Label20.Visible = False
+            ComboBox4.Visible = False
+            Label26.Visible = False
+            ComboBox1.Visible = False
+            Label21.Visible = False
+            ComboBox2.Visible = False
+            Label25.Visible = False
+            Label21.Visible = False
+            ComboBox1.Visible = False
+            Button3.Visible = False
+            Label28.Visible = False
+            Label22.Visible = False
+            DateTimePicker1.Visible = False
+            CheckBox1.Checked = False
+            CheckBox2.Checked = False
+            CheckBox3.Checked = False
+        End If
+    End Sub
+
+    Private Sub CheckBox3_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox3.CheckedChanged
+        If CheckBox3.Checked = True Then
+            Label24.Visible = False
+            ComboBox3.Visible = False
+            Label19.Visible = False
+            Label20.Visible = False
+            ComboBox4.Visible = False
+            Label26.Visible = False
+            ComboBox1.Visible = True
+            Label21.Visible = True
+            Button3.Visible = True
+            Label28.Visible = True
+            Label22.Visible = False
+            DateTimePicker1.Visible = True
+            CheckBox1.Checked = False
+            CheckBox2.Checked = False
+        Else
+            Label24.Visible = False
+            ComboBox3.Visible = False
+            Label19.Visible = False
+            Label20.Visible = False
+            ComboBox4.Visible = False
+            Label26.Visible = False
+            ComboBox1.Visible = False
+            Label21.Visible = False
+            ComboBox2.Visible = False
+            Label25.Visible = False
+            Label21.Visible = False
+            ComboBox1.Visible = False
+            Button3.Visible = False
+            Label28.Visible = False
+            Label22.Visible = False
+            DateTimePicker1.Visible = False
+            CheckBox1.Checked = False
+            CheckBox2.Checked = False
+            CheckBox3.Checked = False
+        End If
+
+    End Sub
+
+    Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
+        If CheckBox1.Checked = True Then
+            Label24.Visible = False
+            ComboBox3.Visible = False
+            Label19.Visible = True
+            Label20.Visible = True
+            ComboBox4.Visible = False
+            Label26.Visible = False
+            Button3.Visible = True
+            Label28.Visible = True
+            Label22.Visible = False
+            DateTimePicker1.Visible = True
+            CheckBox2.Checked = False
+            CheckBox3.Checked = False
+        Else
+            Label24.Visible = False
+            ComboBox3.Visible = False
+            Label19.Visible = False
+            Label20.Visible = False
+            ComboBox4.Visible = False
+            Label26.Visible = False
+            ComboBox1.Visible = False
+            Label21.Visible = False
+            ComboBox2.Visible = False
+            Label25.Visible = False
+            Label21.Visible = False
+            ComboBox1.Visible = False
+            Button3.Visible = False
+            Label28.Visible = False
+            Label22.Visible = False
+            DateTimePicker1.Visible = False
+            CheckBox1.Checked = False
+            CheckBox2.Checked = False
+            CheckBox3.Checked = False
+        End If
+    End Sub
+
+    Private Sub ComboBox2_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox2.SelectedIndexChanged
+        LookupTeacherEmail()
+    End Sub
+
+    Private Sub SubmittedbyCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles SubmittedbyCB.SelectedIndexChanged
+
+    End Sub
 End Class

@@ -16,8 +16,8 @@ Imports System.Windows.Forms.VisualStyles.VisualStyleElement.Tab
 
 Public Class MainFrm
     Dim VersionV As String = "V"
-    Dim VersionN As String = "1.0-alpha-"
-    Dim VersionA As String = "SQL"
+    Dim VersionN As String = "3.0"
+    Dim VersionA As String = " SQL"
     Private connection As SqlConnection
     Dim Version As String = VersionV & VersionN & VersionA
     Private WithEvents connectionCheckTimer As New Timer()
@@ -29,6 +29,7 @@ Public Class MainFrm
     Public employerSurname As String
     Public employerBusinessName As String
     Public employerEmail As String
+    Private template As String = "" ' Declaration at the class level
 
     ' Declare teacher list workbook and worksheet
     Private Sub UpdateReconnectButtonVisibility()
@@ -124,8 +125,11 @@ Public Class MainFrm
             PopulateWeekdays()
             PopulateBlockGroupCB()
             PopulateTeacherComboBox()
+            Populateunit()
             PopulateEmailSubjectComboBox()
             ResetApptrainData()
+            UpdateStudentDatabaseLabel()
+            UpdateProfilingDate()
             'Put Code here - Load Form/application
 
             currentStep = 25
@@ -349,7 +353,7 @@ Public Class MainFrm
         Dim missingFields As String = ""
         Select Case ComboBox12.SelectedItem
 
-            Case "Student Progress Report"
+            Case "Student Term Progress Report"
 
                 If GetLastReportDate(studentID) Is Nothing Then
                     LastReportDatePicker.Show()
@@ -534,7 +538,7 @@ Public Class MainFrm
                     missingFields &= "- Pass/Fail" & vbCrLf
                 End If
 
-            Case "Sent Back to Work/Home Notice"
+            Case "Sent Back to Work Notice"
                 If ComboBox12.Text = "" Then
                     missingFields &= "- Email Subject" & vbCrLf
                 End If
@@ -581,14 +585,42 @@ Public Class MainFrm
                     missingFields &= "- Date" & vbCrLf
                 End If
 
+            Case "Yearly Student Report"
+
+                If GetLastReportDate(studentID) Is Nothing Then
+                    LastReportDatePicker.Show()
+                    Exit Sub
+                End If
+                If ComboBox12.Text = "" Then
+                    missingFields &= "- Email Subject" & vbCrLf
+                End If
+
+                If teacherNameComboBox.Text = "" Then
+                    missingFields &= "- Teacher" & vbCrLf
+                End If
+
+                If DateTimePicker.Text = "" Then
+                    missingFields &= "- Date" & vbCrLf
+                End If
+
+                If ComboBox4.Text = "" Then
+                    missingFields &= "- Attendance/Puncuality" & vbCrLf
+                End If
+
+                If ComboBox5.Text = "" Then
+                    missingFields &= "- Class Room Engagement" & vbCrLf
+                End If
+
+                If ComboBox6.Text = "" Then
+                    missingFields &= "- Course Progression" & vbCrLf
+                End If
+
+
                 ' Additional validation logic specific to ComboBoxOption2
                 ' Cases for ComboBoxOption3 to ComboBoxOption12...
         End Select
 
-        If missingFields <> "" Then
-            MessageBox.Show("Please fill the following fields:" & vbCrLf & missingFields)
-            Exit Sub
-        End If
+
 
         ' If all fields are filled, proceed with submission
 
@@ -853,6 +885,7 @@ Public Class MainFrm
         Label19.Text = ""
         Label22.Text = ""
         Label23.Text = ""
+
         ' Show the loading form
         Dim loadingForm As New LoadingForm()
         loadingForm.Show()
@@ -921,6 +954,7 @@ Public Class MainFrm
         Label19.Text = ""
         Label22.Text = ""
         Label23.Text = ""
+
         ' Show the loading form
         Dim loadingForm As New LoadingForm()
         loadingForm.Show()
@@ -985,8 +1019,8 @@ Public Class MainFrm
 
         ' SQL query to retrieve student and employer information based on the selected student
         Dim query As String = "SELECT [Student ID], [Student Given Name], [Student Family Name], [Student Personal Email], " &
-                          "[Employer Given Name], [Employer Name], [Employer Email], [Block Group Code], [Student Personal Mobile], [Apprenticeship Client ID]" &
-                          "FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE [Student ID] = @StudentID"
+                      "[Employer Given Name], [Employer Name], [Employer Email], [Block Group Code], [Student Personal Mobile], [Apprenticeship Client ID]" &
+                      " FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE [Student ID] = @StudentID"
 
         ' Create a SqlCommand object with the query and connection
         Using command As New SqlCommand(query, connection)
@@ -1015,8 +1049,11 @@ Public Class MainFrm
                     Label29.Text = mobileNumber
 
                     Label34.Text = If(Not reader.IsDBNull(9), reader.GetString(9), "")
-                    'Label28.Text = If(Not reader.IsDBNull(8), reader.GetString(8), "")
+                    '-----------------------------------------------------------------
+                    'Enable once Address field is in SQL database, dont forget to add [Address] in the query field
+                    'Label28.Text = If(Not reader.IsDBNull(10), reader.GetString(10), "")
 
+                    '------------------------------------------------------------------
                     ' Update SelectedStudentLBL with selected student's information
                     SelectedStudentLBL.Text = selectedStudent
 
@@ -1027,7 +1064,45 @@ Public Class MainFrm
         End Using
         ' Call AbsentEarlyLateLog to update absence, late arrival, and early departure logs
         AbsentEarlyLateLog(selectedStudent)
+        Label28.Text = GetStudentAddress(selectedStudent)
     End Sub
+
+    Private Function GetStudentAddress(selectedStudent As String) As String
+        Dim addressList As New List(Of String)
+
+        ' SQL query to retrieve student address from StudentLogs table based on the selected student ID
+        Dim query As String = "SELECT StudentAddress FROM ElectrotechnologyReports.dbo.StudentLogs WHERE [Student ID] = @StudentID"
+
+        ' Create a SqlCommand object with the query and connection
+        Using command As New SqlCommand(query, connection)
+            ' Add parameters to the query
+            ' Assuming selectedStudent is in the format "1234-5678", where "1234" is the float part
+            Dim studentID As Double = Double.Parse(selectedStudent.Split("-"c)(0).Trim())
+            command.Parameters.AddWithValue("@StudentID", studentID)
+
+            ' Execute the query and retrieve the student address
+            Using reader As SqlDataReader = command.ExecuteReader()
+                While reader.Read()
+                    Dim address As Object = reader("StudentAddress")
+                    If address IsNot Nothing AndAlso address IsNot DBNull.Value Then
+                        addressList.Add(address.ToString())
+                    End If
+                End While
+            End Using
+        End Using
+
+        ' Return the first address found, if any
+        If addressList.Count > 0 Then
+            Return addressList(0)
+        Else
+            Return ""
+        End If
+    End Function
+
+
+
+
+
     Private Function AbsentEarlyLateLog(selectedStudent As String) As Boolean
         ' Check if there is data in StudentLogs table for the matching student ID
         Dim hasLogs As Boolean = CheckStudentLogs(selectedStudent)
@@ -1063,11 +1138,20 @@ Public Class MainFrm
 
             Using commandLogs As New SqlCommand(query, connectionLogs)
                 commandLogs.Parameters.AddWithValue("@StudentID", selectedStudent.Split("-"c)(0).Trim())
-                Dim count As Integer = Convert.ToInt32(commandLogs.ExecuteScalar())
+
+                ' Execute the query and retrieve the count
+                Dim count As Integer = 0
+                Using reader As SqlDataReader = commandLogs.ExecuteReader()
+                    If reader.Read() Then
+                        count = Convert.ToInt32(reader(0))
+                    End If
+                End Using
+
                 Return count > 0
             End Using
         End Using
     End Function
+
 
 
 
@@ -1201,7 +1285,7 @@ Public Class MainFrm
         DisplayMode()
     End Sub
     Private Sub DisplayMode()
-        If ComboBox12.Text = "Student Progress Report" Then
+        If ComboBox12.Text = "Student Term Progress Report" Then
             Label24.Visible = False
             Label25.Visible = False
             Label33.Visible = True
@@ -1582,7 +1666,7 @@ Public Class MainFrm
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = True
-        ElseIf ComboBox12.Text = "Sent Back to Work/Home Notice" Then
+        ElseIf ComboBox12.Text = "Sent Back to Work Notice" Then
             Label24.Visible = False
             Label25.Visible = False
             Label33.Visible = True
@@ -1645,7 +1729,7 @@ Public Class MainFrm
             ComboBox8.Visible = True
             Label32.Visible = True
             NotesTB.Visible = True
-            Button8.Visible = False
+            Button8.Visible = True
             'Button3.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
@@ -1707,6 +1791,72 @@ Public Class MainFrm
             ComboBox6.Visible = False
             Label11.Visible = False
             TextBox1.Visible = False
+            Label12.Visible = True
+            ComboBox7.Visible = True
+            Label13.Visible = False
+            ComboBox8.Visible = False
+            Label32.Visible = True
+            NotesTB.Visible = True
+            Button8.Visible = True
+            'Button3.Visible = True
+            'Button10.Visible = False
+            Button7.Visible = False
+            Label35.Visible = False
+        ElseIf ComboBox12.Text = "Yearly Student Report" Then
+            Label24.Visible = False
+            Label25.Visible = False
+            Label33.Visible = True
+            Label6.Visible = False
+            DateTimePicker.Visible = True
+            Label15.Visible = True
+            Label19.Visible = True
+            Label18.Visible = True
+            Label16.Visible = True
+            Label22.Visible = True
+            Label20.Visible = True
+            Label17.Visible = True
+            Label23.Visible = True
+            Label21.Visible = True
+            Label8.Visible = True
+            ComboBox4.Visible = True
+            Label9.Visible = True
+            ComboBox5.Visible = True
+            Label10.Visible = True
+            ComboBox6.Visible = True
+            Label11.Visible = False
+            TextBox1.Visible = False
+            Label12.Visible = False
+            ComboBox7.Visible = False
+            Label13.Visible = False
+            ComboBox8.Visible = False
+            Label32.Visible = True
+            NotesTB.Visible = True
+            Button8.Visible = True
+            Label35.Visible = False
+            Button7.Visible = False
+        ElseIf ComboBox12.Text = "Exemplar Profiling Outstanding Alert" Then
+            Label24.Visible = False
+            Label25.Visible = False
+            Label33.Visible = False
+            Label6.Visible = False
+            DateTimePicker.Visible = False
+            Label15.Visible = True
+            Label19.Visible = True
+            Label18.Visible = True
+            Label16.Visible = True
+            Label22.Visible = True
+            Label20.Visible = True
+            Label17.Visible = True
+            Label23.Visible = True
+            Label21.Visible = True
+            Label8.Visible = False
+            ComboBox4.Visible = False
+            Label9.Visible = False
+            ComboBox5.Visible = False
+            Label10.Visible = False
+            ComboBox6.Visible = False
+            Label11.Visible = False
+            TextBox1.Visible = False
             Label12.Visible = False
             ComboBox7.Visible = False
             Label13.Visible = False
@@ -1745,9 +1895,9 @@ Public Class MainFrm
             ComboBox7.Visible = False
             Label13.Visible = False
             ComboBox8.Visible = False
-            Label32.Visible = False
-            NotesTB.Visible = False
-            Button8.Visible = False
+            Label32.Visible = True
+            NotesTB.Visible = True
+            Button8.Visible = True
             Button3.Visible = False
             Button10.Visible = False
             Button7.Visible = False
@@ -1801,23 +1951,36 @@ Public Class MainFrm
         End If
 
     End Sub
-
     Private Sub Button6_Click_2(sender As Object, e As EventArgs) Handles Button6.Click
-        Dim searchCriteria As Integer
-        If Integer.TryParse(StudentIDTextBox.Text.Trim(), searchCriteria) Then
-            Dim query As String = "SELECT DISTINCT [Block Group Code] AS BlockGroup, CAST([Student ID] AS NVARCHAR(255)) AS StudentID FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE [Student ID] = @searchCriteria OR [Block Group Code] IN (SELECT [Block Group Code] FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE [Student ID] = @searchCriteria)"
+        Dim searchCriteria As String = StudentIDTextBox.Text.Trim()
+        Dim searchCriteriaFloat As Single
+
+        If Single.TryParse(searchCriteria, searchCriteriaFloat) Then
+            Dim blockGroupQuery As String = "SELECT DISTINCT [Block Group Code] AS BlockGroup FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE [Student ID] = @searchCriteria"
+            Dim studentQuery As String = "SELECT DISTINCT CAST([Student ID] AS NVARCHAR(255)) AS StudentID FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE CAST([Student ID] AS FLOAT) = @searchCriteriaFloat"
 
             Using connection As New SqlConnection(SQLCon.connectionString)
-                Using command As New SqlCommand(query, connection)
-                    command.Parameters.AddWithValue("@searchCriteria", searchCriteria)
-                    connection.Open()
-                    Using reader As SqlDataReader = command.ExecuteReader()
+                connection.Open()
+
+                ' Retrieve distinct block group codes
+                Using blockGroupCommand As New SqlCommand(blockGroupQuery, connection)
+                    blockGroupCommand.Parameters.AddWithValue("@searchCriteria", searchCriteriaFloat)
+                    Using blockGroupReader As SqlDataReader = blockGroupCommand.ExecuteReader()
                         BlockGroupCB.Items.Clear()
-                        StudentCB.Items.Clear()
-                        While reader.Read()
-                            Dim blockGroup As String = reader("BlockGroup").ToString()
-                            Dim studentID As String = reader("StudentID").ToString()
+                        While blockGroupReader.Read()
+                            Dim blockGroup As String = blockGroupReader("BlockGroup").ToString()
                             BlockGroupCB.Items.Add(blockGroup)
+                        End While
+                    End Using
+                End Using
+
+                ' Retrieve distinct student IDs matching the StudentIDTextBox value
+                Using studentCommand As New SqlCommand(studentQuery, connection)
+                    studentCommand.Parameters.AddWithValue("@searchCriteriaFloat", searchCriteriaFloat)
+                    Using studentReader As SqlDataReader = studentCommand.ExecuteReader()
+                        StudentCB.Items.Clear()
+                        While studentReader.Read()
+                            Dim studentID As String = studentReader("StudentID").ToString()
                             StudentCB.Items.Add(studentID)
                         End While
                     End Using
@@ -1828,14 +1991,37 @@ Public Class MainFrm
             If BlockGroupCB.Items.Count > 0 Then
                 BlockGroupCB.SelectedIndex = 0
             End If
-            If StudentCB.Items.Count > 0 Then
-                StudentCB.SelectedIndex = 0
+            Dim searchText As String = searchCriteria.Split(" "c)(0)
+            Dim matchingIndex As Integer = -1
+            For i As Integer = 0 To StudentCB.Items.Count - 1
+                Dim studentIDFromCB As String = StudentCB.Items(i).ToString().Split(" "c)(0)
+                If searchText = studentIDFromCB Then
+                    matchingIndex = i
+                    Exit For
+                End If
+            Next
+
+            If matchingIndex <> -1 Then
+                StudentCB.SelectedIndex = matchingIndex
+            Else
+                BlockGroupCB.Items.Clear()
+                BlockGroupCB.Text = ""
+                BlockGroupCB.SelectedIndex = -1 ' Clear selected value
+                StudentCB.Items.Clear()
+                StudentCB.Text = ""
+                StudentCB.SelectedIndex = -1 ' Clear selected value
+                MessageBox.Show("Student ID Doesn't Exist")
             End If
         Else
             MessageBox.Show("Please enter a valid integer value for Student ID.")
         End If
         ResitModule.CheckResit(StudentIDLBL.Text, resitLabel)
     End Sub
+
+
+
+
+
 
     Private Sub Button9_Click_1(sender As Object, e As EventArgs) Handles Button9.Click
         BugReport.Show()
@@ -1945,4 +2131,23 @@ Public Class MainFrm
         End If
     End Sub
 
+    Private Sub Label34_Click(sender As Object, e As EventArgs) Handles Label34.Click
+
+    End Sub
+
+    Private Sub StudentIDTextBox_KeyPress(sender As Object, e As KeyPressEventArgs) Handles StudentIDTextBox.KeyPress
+        ' Check if the pressed key is Enter
+        If e.KeyChar = Convert.ToChar(Keys.Enter) Then
+            ' Trigger the click event of the Search button
+            Button6.PerformClick()
+        End If
+    End Sub
+
+    Private Sub ComboBox4_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox4.SelectedIndexChanged
+
+    End Sub
+
+    Private Sub Label37_Click(sender As Object, e As EventArgs) Handles Label37.Click
+
+    End Sub
 End Class

@@ -104,6 +104,10 @@ Partial Class MainFrm
         Button9 = New Button()
         resitLabel = New Label()
         MassEmailBtn = New Button()
+        Label36 = New Label()
+        Label37 = New Label()
+        Label38 = New Label()
+        Label39 = New Label()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -464,7 +468,7 @@ Partial Class MainFrm
         ' Label14
         ' 
         Label14.AutoSize = True
-        Label14.Location = New Point(147, 511)
+        Label14.Location = New Point(145, 532)
         Label14.Margin = New Padding(4, 0, 4, 0)
         Label14.Name = "Label14"
         Label14.Size = New Size(1138, 21)
@@ -955,6 +959,43 @@ Partial Class MainFrm
         MassEmailBtn.UseVisualStyleBackColor = True
         MassEmailBtn.Visible = False
         ' 
+        ' Label36
+        ' 
+        Label36.AutoSize = True
+        Label36.Location = New Point(174, 22)
+        Label36.Name = "Label36"
+        Label36.Size = New Size(228, 21)
+        Label36.TabIndex = 93
+        Label36.Text = "Student Database Current as of:"
+        Label36.Visible = False
+        ' 
+        ' Label37
+        ' 
+        Label37.AutoSize = True
+        Label37.Location = New Point(398, 22)
+        Label37.Name = "Label37"
+        Label37.Size = New Size(42, 21)
+        Label37.TabIndex = 94
+        Label37.Text = "Date"
+        ' 
+        ' Label38
+        ' 
+        Label38.AutoSize = True
+        Label38.Location = New Point(153, 44)
+        Label38.Name = "Label38"
+        Label38.Size = New Size(306, 21)
+        Label38.TabIndex = 95
+        Label38.Text = "Exemplar Profiling Database Current as of: "
+        ' 
+        ' Label39
+        ' 
+        Label39.AutoSize = True
+        Label39.Location = New Point(451, 44)
+        Label39.Name = "Label39"
+        Label39.Size = New Size(101, 21)
+        Label39.TabIndex = 96
+        Label39.Text = "ProfilingDate"
+        ' 
         ' MainFrm
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -963,6 +1004,10 @@ Partial Class MainFrm
         AutoSize = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
+        Controls.Add(Label39)
+        Controls.Add(Label38)
+        Controls.Add(Label37)
+        Controls.Add(Label36)
         Controls.Add(MassEmailBtn)
         Controls.Add(resitLabel)
         Controls.Add(Button9)
@@ -1133,5 +1178,9 @@ Partial Class MainFrm
     Friend WithEvents Button9 As Button
     Friend WithEvents resitLabel As Label
     Friend WithEvents MassEmailBtn As Button
+    Friend WithEvents Label36 As Label
+    Friend WithEvents Label37 As Label
+    Friend WithEvents Label38 As Label
+    Friend WithEvents Label39 As Label
 
 End Class

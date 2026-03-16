@@ -3,12 +3,8 @@ Imports Microsoft.VisualBasic.FileIO
 Imports System.Data.SqlClient
 Imports System.IO
 Imports Microsoft.VisualBasic.core
-Imports System.ComponentModel
-'Imports Microsoft.Office.Interop.Excel
 
-'Imports Microsoft.SharePoint.Client
-
-Public Class SettingsForm
+Public Class Settings
     Dim totalSteps As Integer = 100 ' Total number of steps
     Dim currentStep As Integer = 5  ' Current step
     ' Define maximum dimensions for allowed images
@@ -16,12 +12,9 @@ Public Class SettingsForm
     Private Const MaxHeight As Integer = 600
     Dim dataSet As New DataSet()
     Private Sub Settings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        Dim SqlConString As String = My.Settings.SQLConString
-        TextBox5.Text = SqlConString
         ' Load initial email addresses from the database and display them in TextBoxes
         LoadCurrentSettings()
         PopulateTeacherComboBox()
-
         Dim connectionString As String = SQLCon.connectionString
 
         ' SQL query to select all data from your table
@@ -47,56 +40,6 @@ Public Class SettingsForm
                 DataGridView1.DataSource = dataTable
             End Using
         End Using
-        'DatabaseStudentUnitDate()
-        'UpdateStudentDatabaseLabel()
-        '--------------------------
-        Try
-            ' Construct the SQL query to retrieve the database update date
-            Dim Newquery As String = "SELECT DatabaseUpdateDate FROM ElectrotechnologyReports.dbo.Updates WHERE ID = 1"
-
-            ' Create a new SqlConnection object using your connection string
-            Using connection As New SqlConnection(SQLCon.connectionString)
-                ' Create a new SqlCommand object with the query and connection
-                Using command As New SqlCommand(Newquery, connection)
-                    ' Open the connection
-                    connection.Open()
-
-                    ' Execute the SQL query and get the result
-                    Dim result As Object = command.ExecuteScalar()
-
-                    ' Check if the result is not null
-                    If result IsNot Nothing AndAlso Not DBNull.Value.Equals(result) Then
-                        ' Convert the result to DateTime
-                        Dim databaseUpdateDate As DateTime = Convert.ToDateTime(result)
-
-
-                        ' Set the label's text property with the database update date formatted as "dd/MM/yyyy"
-                        Me.Label16.Text = databaseUpdateDate.ToString("dd/MM/yyyy")
-
-                    Else
-                        ' If the result is null or DBNull, display a message indicating no date is available
-                        Me.Label16.Text = "Database Update Date Not Available"
-                    End If
-                End Using
-            End Using
-        Catch ex As Exception
-            ' Handle any errors
-            MessageBox.Show("Error retrieving database update date: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-        '--------------------------
-
-        ' Synchronize Label14 with MainFrm.Label37
-        Me.Label14.Visible = MainFrm.Label37.Visible
-        If Me.Label14.Visible Then
-            Me.Label14.Text = MainFrm.Label37.Text
-        End If
-
-        ' Synchronize Label13 with MainFrm.Label36
-        Me.Label13.Visible = MainFrm.Label36.Visible
-        If Me.Label13.Visible Then
-            Me.Label13.Text = MainFrm.Label36.Text
-        End If
-
     End Sub
 
     Private Sub LoadEmailAddresses()
@@ -202,10 +145,6 @@ Public Class SettingsForm
         TradesAdminTB.Text = Trades
     End Sub
     Private Sub btnCancel_Click(sender As Object, e As EventArgs) Handles btnCancel.Click
-        ' Store the state of the checkbox in application settings
-        My.Settings.MassEmail = Me.MassEmailChkBx.Checked
-        ' Save the settings
-        My.Settings.Save()
         Me.Close() ' Close the form without saving changes
     End Sub
 
@@ -646,40 +585,15 @@ Public Class SettingsForm
 
 
     Private Sub Button5_Click(sender As Object, e As EventArgs) Handles Button5.Click
-        Dim ColumnsConfirmed As MsgBoxResult
-
-        ColumnsConfirmed = MsgBox("Have you made sure that the following columns exist?" & vbCrLf & " Student ID " & vbCrLf & " Study Package Code " & vbCrLf & " Grade Code " & vbCrLf & " Student Study Package Status" & vbCrLf & " Contact Student Address Line 1 " & vbCrLf & " Contact Suburb/Town " & vbCrLf & " Contact State " & vbCrLf & " Contact Postcode ", vbYesNo)
-
-        If ColumnsConfirmed = vbNo Then
-            Exit Sub ' If columns are not confirmed, exit the subroutine
-        End If
-
-        Dim conversionConfirmed As MsgBoxResult
-
-        conversionConfirmed = MsgBox("Have you converted this to a 'CSV comma delimited' file?", vbYesNo)
-
-        If conversionConfirmed = vbNo Then
-            Exit Sub ' If conversion is not confirmed, exit the subroutine
-        End If
-
         ' Open a file dialog to select the CSV file
         Dim openFileDialog As New OpenFileDialog()
         openFileDialog.Filter = "CSV files (*.csv)|*.csv"
         openFileDialog.Title = "Select a CSV File"
 
-        Dim loadingForm As New LoadingForm()
-        loadingForm.Show()
-        ' Define custom increments
-        Dim totalSteps As Integer = 100 ' Total number of steps
-        Dim currentStep As Integer = 15  ' Current step
-
         If openFileDialog.ShowDialog() = DialogResult.OK Then
-            currentStep = 30
             ' Read CSV data into the DataSet
             ReadCsvIntoDataSet(openFileDialog.FileName, dataSet)
-            currentStep = 50
-            ' Update progress bar to reflect current progress
-            loadingForm.UpdateProgress(currentStep)
+
             ' Filter the DataSet
             FilterDataSet(dataSet)
 
@@ -694,50 +608,10 @@ Public Class SettingsForm
 
             ' Upload filtered data to SQL database
             UploadToDatabase(dataSet)
-            ' Concatenate address columns and update StudentLogs
-            ConcatenateAndUploadAddress(dataSet)
         End If
-        currentStep = 80
-        ' Update progress bar to reflect current progress
-        loadingForm.UpdateProgress(currentStep)
         UpdateDatabaseUpdateDate()
         UpdateStudentLogs()
-        MainFrm.ResetInvestigation()
-        loadingForm.Label1.Text = "Loading Complete!"
-        loadingForm.UpdateProgress(totalSteps)
-        loadingForm.Close()
-    End Sub
-    Private Sub ConcatenateAndUploadAddress(dataSet As DataSet)
-        Dim connectionString As String = SQLCon.connectionString
 
-        ' Loop through each row in the dataset
-        For Each row As DataRow In dataSet.Tables(0).Rows
-            Dim studentID As String = row("Student ID").ToString()
-            Dim addressLine As String = row("Contact Student Address Line 1").ToString()
-            Dim suburb As String = row("Contact Suburb/Town").ToString()
-            Dim state As String = row("Contact State").ToString()
-            Dim postcode As String = row("Contact Postcode").ToString()
-
-            ' Concatenate address components
-            Dim studentAddress As String = $"{addressLine}, {suburb}, {state}, {postcode}"
-
-            ' Update StudentLogs table with the concatenated address
-            Dim sql As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs " &
-                            "SET StudentAddress = @StudentAddress " &
-                            "WHERE [Student ID] = @StudentID"
-
-            Using connection As New SqlConnection(connectionString)
-                Using command As New SqlCommand(sql, connection)
-                    ' Add parameters to the SQL query
-                    command.Parameters.AddWithValue("@StudentAddress", studentAddress)
-                    command.Parameters.AddWithValue("@StudentID", studentID)
-
-                    ' Open connection and execute the SQL command
-                    connection.Open()
-                    command.ExecuteNonQuery()
-                End Using
-            End Using
-        Next
     End Sub
     Private Sub UpdateDatabaseUpdateDate()
         ' Construct the SQL query to update or insert the date
@@ -1039,7 +913,6 @@ Public Class SettingsForm
             Button3.Visible = False
         Else
             Button3.Visible = True
-            Button4.Visible = True
         End If
         Button4.Visible = True
         Button7.Visible = True
@@ -1095,7 +968,7 @@ Public Class SettingsForm
 
 
     Private Sub TextBox1_TextChanged(sender As Object, e As EventArgs) Handles TextBox1.TextChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1104,7 +977,7 @@ Public Class SettingsForm
     End Sub
 
     Private Sub TextBox2_TextChanged(sender As Object, e As EventArgs) Handles TextBox2.TextChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1113,7 +986,7 @@ Public Class SettingsForm
     End Sub
 
     Private Sub TextBox3_TextChanged(sender As Object, e As EventArgs) Handles TextBox3.TextChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1122,7 +995,7 @@ Public Class SettingsForm
     End Sub
 
     Private Sub TextBox4_TextChanged(sender As Object, e As EventArgs) Handles TextBox4.TextChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1131,7 +1004,7 @@ Public Class SettingsForm
     End Sub
 
     Private Sub ComboBox1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox1.SelectedIndexChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1140,7 +1013,7 @@ Public Class SettingsForm
     End Sub
 
     Private Sub ComboBox2_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox2.SelectedIndexChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1149,7 +1022,7 @@ Public Class SettingsForm
     End Sub
 
     Private Sub ComboBox3_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox3.SelectedIndexChanged
-        'Button4.Visible = False
+        Button4.Visible = False
         If ComboBox4.SelectedItem IsNot Nothing Then
             Button7.Visible = True
         Else
@@ -1241,202 +1114,4 @@ Public Class SettingsForm
         Button7.Visible = True
         Button4.Visible = True
     End Sub
-
-    Private Sub SettingsForm_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        ' Store the state of the checkbox in application settings
-        My.Settings.MassEmail = Me.MassEmailChkBx.Checked
-        ' Save the settings
-        My.Settings.Save()
-    End Sub
-
-    Private Sub MassEmailChkBx_CheckedChanged(sender As Object, e As EventArgs) Handles MassEmailChkBx.CheckedChanged
-
-        ' Show or hide the MassEmailBtn button based on the checkbox state
-        If MassEmailChkBx.Checked Then
-            MainFrm.MassEmailBtn.Visible = True
-        Else
-            MainFrm.MassEmailBtn.Visible = False
-        End If
-    End Sub
-
-    Private Sub txtAdminEmail_TextChanged(sender As Object, e As EventArgs) Handles txtAdminEmail.TextChanged
-
-    End Sub
-
-    Private Sub Button9_Click(sender As Object, e As EventArgs) Handles Button9.Click
-        Try
-            Using connection As New SqlConnection(connectionString)
-                connection.Open()
-
-                ' Define the SQL command to update column values
-                Dim commandText As String = "
-                    UPDATE ElectrotechnologyReports.dbo.StudentLogs
-                    SET Yearly_Early_Departure = '0',
-                        Yearly_Absent = '0',
-                        Yearly_Late_Arrival = '0'
-                "
-
-                ' Execute the SQL command
-                Using command As New SqlCommand(commandText, connection)
-                    command.ExecuteNonQuery()
-                End Using
-
-                MessageBox.Show("All Yearly logs reset successfully.")
-            End Using
-        Catch ex As Exception
-            MessageBox.Show("An error occurred: " & ex.Message)
-        End Try
-    End Sub
-
-    Private Sub Button10_Click(sender As Object, e As EventArgs) Handles Button10.Click
-        My.Settings.SQLConString = TextBox5.Text
-        My.Settings.Save()
-        TextBox5.Text = My.Settings.SQLConString
-
-        ' Display a message box asking the user if they want to restart the application
-        Dim answer As MsgBoxResult
-        answer = MsgBox("Application will now restart. Proceed?", MsgBoxStyle.YesNo)
-
-        ' Check the user's response
-        If answer = MsgBoxResult.Yes Then
-            ' Restart the application
-            RestartApplication()
-        Else
-            ' User chose not to restart, so exit the sub
-            Exit Sub
-        End If
-
-    End Sub
-    Private Sub RestartApplication()
-        Dim applicationPath As String = Application.ExecutablePath
-        Dim processInfo As ProcessStartInfo = New ProcessStartInfo(applicationPath)
-        Process.Start(processInfo)
-        Application.Exit()
-    End Sub
-
-    Private Sub Button11_Click(sender As Object, e As EventArgs) Handles Button11.Click
-        Dim connectionString As String = SQLCon.connectionString
-
-        ' Create a SqlConnection
-        Using connection As New SqlConnection(connectionString)
-            ' Open the connection
-            connection.Open()
-
-            ' Compare and delete non-matching Student IDs from StudentLogs
-            Using command As New SqlCommand("DELETE FROM StudentLogs WHERE [Student ID] NOT IN (SELECT [Student ID] FROM AgreementsDetails)", connection)
-                ' Execute the delete query
-                Dim rowsAffected As Integer = command.ExecuteNonQuery()
-
-                ' Display a message indicating the number of rows deleted
-                MessageBox.Show(rowsAffected & " rows deleted from StudentLogs.")
-            End Using
-
-            ' Close the connection
-            connection.Close()
-        End Using
-    End Sub
-
-    Private Sub Button12_Click(sender As Object, e As EventArgs) Handles Button12.Click
-        ' Get today's date as the default value for the input box
-        Dim defaultDate As String = DateTime.Today.ToString("dd/MM/yyyy")
-
-        ' Prompt the user to input the date in dd/mm/yyyy format with today's date as default
-        Dim userInput As String = InputBox("Please enter the date the Student Database was updated in dd/mm/yyyy format:", "Enter Date", defaultDate)
-
-        ' Parse the user input to DateTime using dd/MM/yyyy format
-        Dim selectedDate As DateTime
-
-        ' Check if the input is empty
-        If userInput <> "" Then
-            If Not DateTime.TryParseExact(userInput, "dd/MM/yyyy", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, selectedDate) Then
-                ' Display an error message if the input format is incorrect
-                MessageBox.Show("Invalid date format. Please enter the date in dd/mm/yyyy format.")
-                Return
-            End If
-        End If
-
-        ' Convert the selected date to yyyy-MM-dd format for SQL
-        Dim formattedDate As String
-        If selectedDate = DateTime.MinValue Then
-            formattedDate = DBNull.Value.ToString() ' Set DBNull.Value if the input is empty
-        Else
-            formattedDate = selectedDate.ToString("yyyy-MM-dd")
-        End If
-
-        ' Database connection string
-        Dim connectionString As String = SQLCon.connectionString
-
-        ' SQL query to update the date in the table
-        Dim query As String = "UPDATE ElectrotechnologyReports.dbo.Updates SET StudentDatabaseDate = @SelectedDate WHERE ID = 1;" ' Assuming the ID of the row you want to update is 1
-
-        Try
-            ' Create a SqlConnection and SqlCommand objects
-            Using connection As New SqlConnection(connectionString)
-                Using command As New SqlCommand(query, connection)
-                    ' Add parameter for the selected date
-                    command.Parameters.AddWithValue("@SelectedDate", If(formattedDate = DBNull.Value.ToString(), DBNull.Value, formattedDate))
-
-                    ' Open the connection
-                    connection.Open()
-
-                    ' Execute the SQL command
-                    command.ExecuteNonQuery()
-
-                    ' Display a success message
-                    MessageBox.Show("Student Database Date has been updated successfully.")
-                End Using
-            End Using
-        Catch ex As Exception
-            ' Handle exceptions
-            MessageBox.Show("Error updating date: " & ex.Message)
-        End Try
-    End Sub
-
-    Private Sub Button13_Click(sender As Object, e As EventArgs) Handles Button13.Click
-
-        Dim result As DialogResult = MessageBox.Show("Open up the excel file using Excel program and confirm you have:" & vbCrLf & vbCrLf & "Deleted Rows 1-3 Showing only Column headings on row 1?" & vbCrLf & vbCrLf & "Deleted duplicate Student ID rows having only 1 unique Student ID if prompted?" & vbCrLf & vbCrLf & "Deleted all columns after Column AS?" & vbCrLf & vbCrLf & "For entire Student Personal Mobile column, to set coliumn to STRING use the Excel Text to columns feature and " & vbCrLf & "Select delimited & next, selecting tab & next, checking text & hitting the finish button. Repeat this for all applicable STRING column errors" & vbCrLf & vbCrLf & vbCrLf & "If all the above has been completed, you may hit Yes otherwise hit No", "Confirmation", MessageBoxButtons.YesNo)
-
-        If result = DialogResult.Yes Then
-            Dim openFileDialog1 As New OpenFileDialog()
-            openFileDialog1.Filter = "Excel Files|*.xls;*.xlsx;*.xlsm"
-            openFileDialog1.Title = "Select an Excel File"
-
-            If openFileDialog1.ShowDialog() = DialogResult.OK Then
-                Dim excelFilePath As String = openFileDialog1.FileName
-
-                ' Define SQL column names
-                Dim sqlColumnNames As New List(Of String) From {
-                    "Agreement ID", "Student ID", "Student Given Name", "Student Family Name", "Epsilon Start Date",
-                    "Epsilon End Date", "Student Personal Email", "Student Personal Mobile", "Employer Surname",
-                    "Employer Given Name", "Employer Contact Phone", "Employer Email", "Agreement Category", "Course",
-                    "Course Title", "Course Status", "Course Location", "Block Group Code", "Agreement Status",
-                    "Agreement Task", "Employer Name", "Employer ABN", "School Name", "School Email", "Org Unit",
-                    "Agreement Name", "Agreement Type Code", "Training Plan Generated", "Signed Training Plan Uploaded",
-                    "Units for Employer Sign off", "Progress Report Generated", "Signed Progress Report Uploaded",
-                    "All Units Resulted?", "All Units Verified?", "Number Units Completed", "Course Hours Completed",
-                    "Any Sanctions", "Completion Training Plan Generated", "Signed Completion Training Plan Uploaded",
-                    "Department Email", "Student VU Email", "Actual Start Date", "Actual End Date", "Age of Agreement",
-                    "Apprenticeship Client ID"
-                }
-
-                ' Perform data validation checks
-                Dim isValid As Boolean = ValidateExcelData(excelFilePath, sqlColumnNames)
-
-                If isValid Then
-                    Dim importResult As DialogResult = MessageBox.Show("Validation successful. Do you want to proceed with importing data into SQL?", "Confirmation", MessageBoxButtons.YesNo)
-
-                    If importResult = DialogResult.Yes Then
-                        ' Call function to import data into SQL
-                        ' ImportDataIntoSQL(excelFilePath)
-                    Else
-                        ' User chose not to proceed, exit the sub
-                        Exit Sub
-                    End If
-                Else
-                    MessageBox.Show("Validation failed. Please check the Excel file and try again.")
-                End If
-            End If
-        End If
-    End Sub
-
 End Class
