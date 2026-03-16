@@ -76,12 +76,11 @@ Partial Class StudentUnits
         ' 
         ' VersionLBL
         ' 
-        VersionLBL.AutoSize = True
-        VersionLBL.Location = New Point(761, 70)
+        VersionLBL.Location = New Point(684, 70)
         VersionLBL.Name = "VersionLBL"
-        VersionLBL.Size = New Size(22, 15)
+        VersionLBL.Size = New Size(179, 18)
         VersionLBL.TabIndex = 62
-        VersionLBL.Text = "1.0"
+        VersionLBL.TextAlign = ContentAlignment.MiddleCenter
         ' 
         ' GroupBox1
         ' 
@@ -416,9 +415,9 @@ Partial Class StudentUnits
         CheckBox25.AutoSize = True
         CheckBox25.Location = New Point(684, 567)
         CheckBox25.Name = "CheckBox25"
-        CheckBox25.Size = New Size(303, 19)
+        CheckBox25.Size = New Size(297, 19)
         CheckBox25.TabIndex = 89
-        CheckBox25.Text = "HTLTAID009 - Provide cardiopulmonary resuscitation"
+        CheckBox25.Text = "HLTAID009 - Provide cardiopulmonary resuscitation"
         CheckBox25.UseVisualStyleBackColor = True
         ' 
         ' CheckBox26

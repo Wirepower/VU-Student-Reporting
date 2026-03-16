@@ -53,7 +53,7 @@ Public Class EmailTemplates
         Dim selectedEmailSubject As String = ComboBox1.SelectedItem.ToString()
 
         ' Construct SQL SELECT command to retrieve the EmailBody based on the selected email subject
-        Dim selectCommand As String = "SELECT EmailBody FROM ElectrotechnologyReports.dbo.EmailTemplates WHERE EmailSubject = @EmailSubject"
+        Dim selectCommand As String = "SELECT EmailBody, EmailHelp FROM ElectrotechnologyReports.dbo.EmailTemplates WHERE EmailSubject = @EmailSubject"
 
         Try
             ' Create SqlConnection and SqlCommand objects
@@ -71,9 +71,11 @@ Public Class EmailTemplates
                         If reader.Read() Then
                             ' Populate TextBox1 with the EmailBody
                             TextBox1.Text = reader("EmailBody").ToString()
+                            TextBox2.Text = reader("EmailHelp").ToString()
                         Else
                             ' If no data found, clear TextBox1
                             TextBox1.Text = ""
+                            TextBox2.Text = ""
                         End If
                     End Using
                 End Using
@@ -102,8 +104,9 @@ Public Class EmailTemplates
         ' Get the values from the TextBox controls
         Dim newEmailSubject As String = ComboBox1.Text
         Dim newEmailBody As String = TextBox1.Text
+        Dim newEmailHelp As String = TextBox2.Text
         ' Construct SQL INSERT command
-        Dim insertCommand As String = "INSERT INTO ElectrotechnologyReports.dbo.EmailTemplates (EmailSubject, EmailBody) VALUES (@EmailSubject, @EmailBody)"
+        Dim insertCommand As String = "INSERT INTO ElectrotechnologyReports.dbo.EmailTemplates (EmailSubject, EmailBody, EmailHelp) VALUES (@EmailSubject, @EmailBody, @EmailHelp)"
         Try
             ' Create SqlConnection and SqlCommand objects
             Using connection As New SqlConnection(SQLCon.connectionString)
@@ -111,6 +114,7 @@ Public Class EmailTemplates
                     ' Add parameters for the new email subject and body
                     command.Parameters.AddWithValue("@EmailSubject", newEmailSubject)
                     command.Parameters.AddWithValue("@EmailBody", newEmailBody)
+                    command.Parameters.AddWithValue("@EmailHelp", newEmailHelp)
                     ' Open connection
                     connection.Open()
                     ' Execute SQL command
@@ -130,10 +134,11 @@ Public Class EmailTemplates
         ' Get the values from the TextBox controls
         Dim updatedEmailSubject As String = ComboBox1.Text
         Dim updatedEmailBody As String = TextBox1.Text
+        Dim updatedEmailHelp As String = TextBox2.Text
         ' Get the selected email subject
         Dim selectedEmailSubject As String = ComboBox1.SelectedItem.ToString()
         ' Construct SQL UPDATE command
-        Dim updateCommand As String = "UPDATE ElectrotechnologyReports.dbo.EmailTemplates SET EmailBody = @UpdatedEmailBody WHERE EmailSubject = @SelectedEmailSubject"
+        Dim updateCommand As String = "UPDATE ElectrotechnologyReports.dbo.EmailTemplates SET EmailBody = @UpdatedEmailBody, EmailHelp = @UpdatedEmailHelp WHERE EmailSubject = @SelectedEmailSubject"
         Try
             ' Create SqlConnection and SqlCommand objects
             Using connection As New SqlConnection(SQLCon.connectionString)
@@ -141,6 +146,7 @@ Public Class EmailTemplates
                     ' Add parameters for the updated email body and selected email subject
                     command.Parameters.AddWithValue("@UpdatedEmailBody", updatedEmailBody)
                     command.Parameters.AddWithValue("@SelectedEmailSubject", selectedEmailSubject)
+                    command.Parameters.AddWithValue("@UpdatedEmailHelp", updatedEmailHelp)
                     ' Open connection
                     connection.Open()
                     ' Execute SQL command
@@ -175,6 +181,7 @@ Public Class EmailTemplates
                         ' Refresh the ComboBox and TextBox after deleting
                         PopulateEmailSubjectComboBox()
                         TextBox1.Clear()
+                        TextBox2.Clear()
                         ComboBox1.Text = ""
                     End Using
                 End Using
@@ -189,7 +196,7 @@ Public Class EmailTemplates
     Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
         ComboBox1.Text = ""  ' Clear ComboBox text first
         TextBox1.Text = ""   ' Clear TextBox text second
-
+        TextBox2.Text = ""   ' Clear TextBox text second
         ' Show all buttons
         Button4.Visible = True
         Button3.Visible = True

@@ -73,7 +73,7 @@ Module SendOutlookEmail
                 ' Open the connection
                 connection.Open()
 
-                If MainFrm.ComboBox12.Text = "Student Progress Report" Then
+                If MainFrm.ComboBox12.Text = "Student Term Progress Report" Or MainFrm.ComboBox12.Text = "Yearly Student Report" Then
                     Try
                         ' Check if the student ID exists in the table
                         Dim queryCheck As String = "SELECT COUNT(*) FROM ElectrotechnologyReports.dbo.StudentLogs WHERE [Student ID] = @StudentID"
@@ -122,14 +122,14 @@ Module SendOutlookEmail
 
                             If count > 0 Then
                                 ' Student ID exists, so update the existing row
-                                Dim queryUpdate As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs SET [Absent] = [Absent] + 1 WHERE [Student ID] = @StudentID"
+                                Dim queryUpdate As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs SET [Absent] = [Absent] + 1, [Yearly_Absent] = [Yearly_Absent] + 1 WHERE [Student ID] = @StudentID"
                                 Using commandUpdate As New SqlCommand(queryUpdate, connection)
                                     commandUpdate.Parameters.AddWithValue("@StudentID", studentID)
                                     commandUpdate.ExecuteNonQuery()
                                 End Using
                             Else
                                 ' Student ID does not exist, so insert a new row
-                                Dim queryInsert As String = "INSERT INTO ElectrotechnologyReports.dbo.StudentLogs ([Student ID], [Absent]) VALUES (@StudentID, @Absent)"
+                                Dim queryInsert As String = "INSERT INTO ElectrotechnologyReports.dbo.StudentLogs ([Student ID], [Absent], [Yearly_Absent]) VALUES (@StudentID, @Absent, 1)"
                                 Using commandInsert As New SqlCommand(queryInsert, connection)
                                     commandInsert.Parameters.AddWithValue("@StudentID", studentID)
                                     commandInsert.Parameters.AddWithValue("@Absent", +1) ' Assuming you want to insert today's date
@@ -156,7 +156,7 @@ Module SendOutlookEmail
 
                             If count > 0 Then
                                 ' Student ID exists, so update the existing row
-                                Dim queryUpdate As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs SET [Early Departure] = [Early Departure] + 1 WHERE [Student ID] = @StudentID"
+                                Dim queryUpdate As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs SET [Early Departure] = [Early Departure] + 1, [Yearly_Early_Departure] = [Yearly_Early_Departure] + 1 WHERE [Student ID] = @StudentID"
 
                                 Using commandUpdate As New SqlCommand(queryUpdate, connection)
                                     commandUpdate.Parameters.AddWithValue("@StudentID", studentID)
@@ -164,7 +164,7 @@ Module SendOutlookEmail
                                 End Using
                             Else
                                 ' Student ID does not exist, so insert a new row
-                                Dim queryInsert As String = "INSERT INTO ElectrotechnologyReports.dbo.StudentLogs ([Student ID], [Early Departure]) VALUES (@StudentID, @EarlyDeparture)"
+                                Dim queryInsert As String = "INSERT INTO ElectrotechnologyReports.dbo.StudentLogs ([Student ID], [Early Departure], [Yearly_Early_Departure]) VALUES (@StudentID, @EarlyDeparture)"
                                 Using commandInsert As New SqlCommand(queryInsert, connection)
                                     commandInsert.Parameters.AddWithValue("@StudentID", studentID)
                                     commandInsert.Parameters.AddWithValue("@EarlyDeparture", +1) ' Assuming you want to insert today's date
@@ -191,14 +191,14 @@ Module SendOutlookEmail
 
                             If count > 0 Then
                                 ' Student ID exists, so update the existing row
-                                Dim queryUpdate As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs SET [Late Arrival] = [Late Arrival] + 1 WHERE [Student ID] = @StudentID"
+                                Dim queryUpdate As String = "UPDATE ElectrotechnologyReports.dbo.StudentLogs SET [Late Arrival] = [Late Arrival] + 1, [Yearly_Late_Arrival] = [Yearly_Late_Arrival] + 1 WHERE [Student ID] = @StudentID"
                                 Using commandUpdate As New SqlCommand(queryUpdate, connection)
                                     commandUpdate.Parameters.AddWithValue("@StudentID", studentID)
                                     commandUpdate.ExecuteNonQuery()
                                 End Using
                             Else
                                 ' Student ID does not exist, so insert a new row
-                                Dim queryInsert As String = "INSERT INTO ElectrotechnologyReports.dbo.StudentLogs ([Student ID], [Late Arrival]) VALUES (@StudentID, @LateArrival)"
+                                Dim queryInsert As String = "INSERT INTO ElectrotechnologyReports.dbo.StudentLogs ([Student ID], [Late Arrival], [Yearly_Late_Arrival]) VALUES (@StudentID, @LateArrival)"
                                 Using commandInsert As New SqlCommand(queryInsert, connection)
                                     commandInsert.Parameters.AddWithValue("@StudentID", studentID)
                                     commandInsert.Parameters.AddWithValue("@LateArrival", +1) ' Assuming you want to insert today's date
@@ -355,7 +355,7 @@ Module SendOutlookEmail
         End Using
         Dim lastReportDate As Date? = GetLastReportDate(studentID)
         If lastReportDate.HasValue Then
-            If MainFrm.ComboBox12.Text = "Student Progress Report" Then
+            If MainFrm.ComboBox12.Text = "Student Term Progress Report" Then
                 lastReportDate = lastReportDate.Value.ToString("dddd, dd MMMM, yyyy")
 
             End If
@@ -368,7 +368,7 @@ Module SendOutlookEmail
             ' Open the connection
             connection.Open()
 
-            If MainFrm.ComboBox12.Text = "Student Progress Report" Then
+            If MainFrm.ComboBox12.Text = "Student Term Progress Report" Then
                 Try
                     ' Check if the student ID exists in the table
                     Dim queryCheck As String = "SELECT COUNT(*) FROM ElectrotechnologyReports.dbo.StudentLogs WHERE [Student ID] = @StudentID"
@@ -403,6 +403,8 @@ Module SendOutlookEmail
                     MessageBox.Show("Error writing responses to SQL database: " & ex.Message)
                 End Try
             End If
+
+            '----
         End Using
 
         Call ObtainSQL()
@@ -438,6 +440,7 @@ Module SendOutlookEmail
         Dim LateLog As String = MainFrm.Label22.Text
         Dim EarlyLog As String = MainFrm.Label19.Text
         Dim StudentID1 As Double = MainFrm.StudentIDLBL.Text
+
 
         'Dim lastReportDate As DateTime
         'Dim lastReportDate As Date? = GetLastReportDate(studentID)
@@ -476,7 +479,60 @@ Module SendOutlookEmail
         template = template.Replace("[EmailedStudent]", emailedstudent)
         template = template.Replace("[RangStudent]", rangstudent)
         template = template.Replace("[OtherContact]", othercontact)
-        template = template.Replace("[OtherContactText]", otherText)
+        template = template.Replace("[OtherContactText]", othertext)
+        Dim missingFields As String = ""
+        If MainFrm.ComboBox12.Text = "Yearly Student Report" Then
+            ' Prompt the user to input the total days of school
+            Dim totalSchoolDaysInput As String = InputBox("Please input the total days of school for the year:", "Total School Days")
+
+            ' Validate the input (optional)
+            If Not String.IsNullOrWhiteSpace(totalSchoolDaysInput) AndAlso IsNumeric(totalSchoolDaysInput) Then
+                ' Assign the input value to the placeholder in your email template
+                Dim totalSchoolDays As Integer = CInt(totalSchoolDaysInput)
+                template = template.Replace("[TotalSchoolDays]", totalSchoolDays.ToString())
+
+                ' Now you can proceed with further actions, such as sending the email with the updated template
+                ' Or you can simply display a message confirming that the value has been assigned to the placeholder
+                MessageBox.Show("Total school days updated successfully.")
+            Else
+                ' Handle invalid input or cancellation
+                MessageBox.Show("Invalid input or cancellation. Please input a valid numeric value for total school days.")
+            End If
+        End If
+        If missingFields <> "" Then
+            MessageBox.Show("Please fill the following fields:" & vbCrLf & missingFields)
+            Exit Function
+        End If
+
+        Dim Newquery As String = "SELECT Yearly_Early_Departure, Yearly_Absent, Yearly_Late_Arrival FROM ElectrotechnologyReports.dbo.StudentLogs WHERE [Student ID] = @StudentID"
+        ' Create a SqlConnection and SqlCommand objects
+        Using connection As New SqlConnection(connectionString)
+            Using command As New SqlCommand(Newquery, connection)
+                ' Add parameter for the student ID
+                command.Parameters.AddWithValue("@StudentID", studentID)
+
+                ' Open the connection
+                connection.Open()
+
+                ' Execute the query and read the result
+                Using reader As SqlDataReader = command.ExecuteReader()
+                    If reader.Read() Then
+                        ' Retrieve data from the reader
+                        Dim studentYearlyEarlyDeparture As Integer = If(Not IsDBNull(reader("Yearly_Early_Departure")), CInt(reader("Yearly_Early_Departure")), 0)
+                        Dim studentYearlyAbsent As Integer = If(Not IsDBNull(reader("Yearly_Absent")), CInt(reader("Yearly_Absent")), 0)
+                        Dim studentYearlyLateArrival As Integer = If(Not IsDBNull(reader("Yearly_Late_Arrival")), CInt(reader("Yearly_Late_Arrival")), 0)
+
+                        ' Populate the email template placeholders with retrieved data
+                        template = template.Replace("[YearlyEarlyLog]", studentYearlyEarlyDeparture.ToString())
+                        template = template.Replace("[YearlyAbsentLog]", studentYearlyAbsent.ToString())
+                        template = template.Replace("[YearlyLateLog]", studentYearlyLateArrival.ToString())
+                    Else
+                        ' Handle case where no matching student log data is found
+                        ' You might want to provide default values or handle this case differently
+                    End If
+                End Using
+            End Using
+        End Using
 
         'template = template.Replace("[studentID]", StudentID1)
 
@@ -511,6 +567,7 @@ Module SendOutlookEmail
     Private Sub ObtainSQL()
         Dim connectionString As String = SQLCon.connectionString
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Assuming studentIDlbl is your label containing the Student ID
+
         If MainFrm.ComboBox12.Text = "Student Investigation" Then
 
             Dim query As String = "SELECT [Apptrain-Studentbeenemailed], [AppTrain-Haveyourangstudents], [AppTrain-OtherFormofcontact], [AppTrain-OtherText], [LastStudentReportDate] FROM ElectrotechnologyReports.dbo.StudentLogs WHERE [Student ID] = @StudentID"
@@ -530,6 +587,8 @@ Module SendOutlookEmail
                         othercontact = reader("AppTrain-OtherFormofcontact")
                         othertext = reader("AppTrain-OtherText")
                         LastStudentReportDate = reader("LastStudentReportDate")
+
+
                         ' Now you can use these variables as needed
                         ' For example:
                         ' DisplayStudentData() ' Call a method to display the data
@@ -542,10 +601,8 @@ Module SendOutlookEmail
                     reader.Close()
                 End Using
             End Using
+            End if
 
-        Else
-            Exit Sub
-        End If
     End Sub
 
 End Module

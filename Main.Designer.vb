@@ -104,6 +104,8 @@ Partial Class MainFrm
         Button9 = New Button()
         resitLabel = New Label()
         MassEmailBtn = New Button()
+        Label36 = New Label()
+        Label37 = New Label()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -955,6 +957,25 @@ Partial Class MainFrm
         MassEmailBtn.UseVisualStyleBackColor = True
         MassEmailBtn.Visible = False
         ' 
+        ' Label36
+        ' 
+        Label36.AutoSize = True
+        Label36.Location = New Point(174, 22)
+        Label36.Name = "Label36"
+        Label36.Size = New Size(228, 21)
+        Label36.TabIndex = 93
+        Label36.Text = "Student Database Current as of:"
+        Label36.Visible = False
+        ' 
+        ' Label37
+        ' 
+        Label37.AutoSize = True
+        Label37.Location = New Point(398, 22)
+        Label37.Name = "Label37"
+        Label37.Size = New Size(42, 21)
+        Label37.TabIndex = 94
+        Label37.Text = "Date"
+        ' 
         ' MainFrm
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -963,6 +984,8 @@ Partial Class MainFrm
         AutoSize = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
+        Controls.Add(Label37)
+        Controls.Add(Label36)
         Controls.Add(MassEmailBtn)
         Controls.Add(resitLabel)
         Controls.Add(Button9)
@@ -1133,5 +1156,7 @@ Partial Class MainFrm
     Friend WithEvents Button9 As Button
     Friend WithEvents resitLabel As Label
     Friend WithEvents MassEmailBtn As Button
+    Friend WithEvents Label36 As Label
+    Friend WithEvents Label37 As Label
 
 End Class
