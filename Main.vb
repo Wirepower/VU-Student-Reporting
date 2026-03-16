@@ -1,4 +1,4 @@
-﻿Imports System.ComponentModel
+Imports System.ComponentModel
 Imports System.IO
 Imports Microsoft.Data.SqlClient
 Imports Microsoft.Win32
@@ -241,21 +241,58 @@ Public Class MainFrm
     End Sub
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        ' Perform update check when the button is clicked
+        ' Stage 1 OTA foundation: check GitHub release status only.
+        Try
+            Dim gitHubResult As GitHubUpdateCheckResult = UpdateModule.CheckForGitHubUpdateAsync().GetAwaiter().GetResult()
+            If gitHubResult.IsSuccessful Then
+                If gitHubResult.IsUpdateAvailable Then
+                    Dim latestTag As String = "(unknown)"
+                    Dim releaseUrl As String = "https://github.com/Wirepower/VU-Student-Reporting/releases"
+
+                    If gitHubResult.LatestRelease IsNot Nothing Then
+                        If Not String.IsNullOrWhiteSpace(gitHubResult.LatestRelease.TagName) Then
+                            latestTag = gitHubResult.LatestRelease.TagName
+                        End If
+
+                        If Not String.IsNullOrWhiteSpace(gitHubResult.LatestRelease.HtmlUrl) Then
+                            releaseUrl = gitHubResult.LatestRelease.HtmlUrl
+                        End If
+                    End If
+
+                    MessageBox.Show(
+                        "A newer GitHub release is available." & vbCrLf &
+                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
+                        "Latest release: " & latestTag & vbCrLf & vbCrLf &
+                        "Release notes: " & releaseUrl & vbCrLf & vbCrLf &
+                        "Automatic install will be enabled in the next update step.",
+                        "Update Available",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    )
+                Else
+                    MessageBox.Show(
+                        "You are currently on the latest configured release tag (" & gitHubResult.CurrentTag & ").",
+                        "No Update Available",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    )
+                End If
+
+                Return
+            End If
+        Catch
+            ' Continue to legacy updater fallback below.
+        End Try
+
+        ' Legacy SQL/P-drive update path fallback remains available.
         If UpdateModule.IsUpdateAvailable() Then
-            ' Prompt the user to update
             Dim result As DialogResult = MessageBox.Show("An update is available. Do you want to download and install it?", "Update Available", MessageBoxButtons.YesNo)
             If result = DialogResult.Yes Then
-                ' Implement download and install update logic here if user chooses to update
                 DownloadAndUpdate()
             End If
         Else
-            ' Inform the user that no update is available
-            MessageBox.Show("Your application is up to date.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
-        'CheckVersionAndDisplayInfo()
-        ' Your existing Button1 click event handler code
-        ' This will only execute when Button1 is clicked
     End Sub
 
     Private Sub CheckVersionAndDisplayInfo()
