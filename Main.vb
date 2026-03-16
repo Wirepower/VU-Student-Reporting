@@ -129,6 +129,11 @@ Public Class MainFrm
             PopulateEmailSubjectComboBox()
             ResetApptrainData()
             UpdateStudentDatabaseLabel()
+            If ExemplarProfilingApi.IsConfigured() Then
+                SetProfilingApiStatus("Ready", "Select a student to load profiling status.", Color.DarkGreen)
+            Else
+                SetProfilingApiStatus("Not configured", "Set environment variable EXEMPLAR_API_TOKEN to enable profiling API.", Color.DarkOrange)
+            End If
             'Put Code here - Load Form/application
 
             currentStep = 25
@@ -317,6 +322,39 @@ Public Class MainFrm
             End If
         ElseIf showNoUpdateMessage Then
             MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        End If
+    End Function
+
+    Private Sub SetProfilingApiStatus(statusText As String, detailText As String, Optional statusColor As Color? = Nothing)
+        Label38.Text = "Profiling API:"
+        Label38.Visible = True
+        Label39.Visible = True
+        Label39.Text = If(String.IsNullOrWhiteSpace(detailText), statusText, $"{statusText} | {detailText}")
+        Label39.ForeColor = If(statusColor.HasValue, statusColor.Value, Color.Black)
+    End Sub
+
+    Private Async Function RefreshSelectedStudentProfilingAsync() As Task
+        Dim firstName As String = StudentFirstnameLBL.Text?.Trim()
+        Dim lastName As String = StudentSurnameLBL.Text?.Trim()
+        Dim email As String = StudentEmailLBL.Text?.Trim()
+
+        If String.IsNullOrWhiteSpace(firstName) OrElse String.IsNullOrWhiteSpace(lastName) Then
+            SetProfilingApiStatus("Waiting", "Select a student to query the profiling API.", Color.Black)
+            Return
+        End If
+
+        SetProfilingApiStatus("Checking", $"{firstName} {lastName}", Color.SteelBlue)
+        Dim lookupResult As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, email)
+
+        If Not lookupResult.IsConfigured Then
+            SetProfilingApiStatus("Not configured", lookupResult.DetailText, Color.DarkOrange)
+            Return
+        End If
+
+        If lookupResult.IsSuccessful Then
+            SetProfilingApiStatus("Connected", lookupResult.DetailText, Color.DarkGreen)
+        Else
+            SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
         End If
     End Function
 
@@ -1015,7 +1053,7 @@ Public Class MainFrm
         End Using
     End Sub
 
-    Private Sub StudentCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles StudentCB.SelectedIndexChanged
+    Private Async Sub StudentCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles StudentCB.SelectedIndexChanged
         Label19.Text = ""
         Label22.Text = ""
         Label23.Text = ""
@@ -1074,6 +1112,8 @@ Public Class MainFrm
         If StudentCB.Text = "" Then
             PopulateBlockGroupCB()
         End If
+
+        Await RefreshSelectedStudentProfilingAsync()
 
         '-------------------Need to look at below----------------------------
 

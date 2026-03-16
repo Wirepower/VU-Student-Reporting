@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class MainFrm
     Inherits System.Windows.Forms.Form
 
@@ -106,6 +106,8 @@ Partial Class MainFrm
         MassEmailBtn = New Button()
         Label36 = New Label()
         Label37 = New Label()
+        Label38 = New Label()
+        Label39 = New Label()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -975,6 +977,26 @@ Partial Class MainFrm
         Label37.Size = New Size(42, 21)
         Label37.TabIndex = 94
         Label37.Text = "Date"
+        '
+        ' Label38
+        '
+        Label38.AutoSize = True
+        Label38.Location = New Point(174, 44)
+        Label38.Name = "Label38"
+        Label38.Size = New Size(95, 21)
+        Label38.TabIndex = 95
+        Label38.Text = "Profiling API:"
+        Label38.Visible = False
+        '
+        ' Label39
+        '
+        Label39.AutoSize = True
+        Label39.Location = New Point(275, 44)
+        Label39.Name = "Label39"
+        Label39.Size = New Size(96, 21)
+        Label39.TabIndex = 96
+        Label39.Text = "Not checked"
+        Label39.Visible = False
         ' 
         ' MainFrm
         ' 
@@ -984,6 +1006,8 @@ Partial Class MainFrm
         AutoSize = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
+        Controls.Add(Label39)
+        Controls.Add(Label38)
         Controls.Add(Label37)
         Controls.Add(Label36)
         Controls.Add(MassEmailBtn)
@@ -1158,5 +1182,7 @@ Partial Class MainFrm
     Friend WithEvents MassEmailBtn As Button
     Friend WithEvents Label36 As Label
     Friend WithEvents Label37 As Label
+    Friend WithEvents Label38 As Label
+    Friend WithEvents Label39 As Label
 
 End Class
