@@ -1,3 +1,5 @@
+Imports System.Globalization
+Imports System.Linq
 Imports System.Net
 Imports System.Net.Http
 Imports System.Net.Http.Headers
@@ -22,6 +24,23 @@ Public Class ExemplarQualificationUpdateResult
     Public Property ResponseBody As String
 End Class
 
+Public Class ExemplarUnitProgressItem
+    Public Property UnitCode As String
+    Public Property Percentage As Decimal?
+    Public Property Status As String
+    Public Property TotalCards As Integer?
+    Public Property CompletedCards As Integer?
+End Class
+
+Public Class ExemplarUnitProgressResult
+    Public Property IsSuccessful As Boolean
+    Public Property IsConfigured As Boolean
+    Public Property UserId As String
+    Public Property QualificationId As String
+    Public Property Units As New Dictionary(Of String, ExemplarUnitProgressItem)(StringComparer.OrdinalIgnoreCase)
+    Public Property ErrorMessage As String
+End Class
+
 Module ExemplarProfilingApi
     Private Const DefaultBaseUrl As String = "https://api.profiling.exemplarsystems.com.au"
     Private ReadOnly ApiClient As New HttpClient() With {
@@ -38,6 +57,19 @@ Module ExemplarProfilingApi
 
     Public Function IsConfigured() As Boolean
         Return Not String.IsNullOrWhiteSpace(GetBearerToken())
+    End Function
+
+    Public Function GetConfiguredQualificationId() As String
+        If Not String.IsNullOrWhiteSpace(My.Settings.ExemplarQualificationId) Then
+            Return My.Settings.ExemplarQualificationId.Trim()
+        End If
+
+        Dim envQualification As String = Environment.GetEnvironmentVariable("EXEMPLAR_QUALIFICATION_ID")
+        If String.IsNullOrWhiteSpace(envQualification) Then
+            Return ""
+        End If
+
+        Return envQualification.Trim()
     End Function
 
     Public Sub SetBearerToken(token As String)
@@ -61,7 +93,7 @@ Module ExemplarProfilingApi
                 .IsSuccessful = False,
                 .IsConfigured = False,
                 .StatusText = "Not configured",
-                .DetailText = "Set environment variable EXEMPLAR_API_TOKEN to enable profiling lookups."
+                .DetailText = "Profiling API credentials are not configured."
             }
         End If
 
@@ -122,12 +154,91 @@ Module ExemplarProfilingApi
         End Try
     End Function
 
+    Public Async Function GetStudentUnitProgressAsync(firstName As String, lastName As String, email As String, qualificationId As String, unitCodes As IEnumerable(Of String)) As Task(Of ExemplarUnitProgressResult)
+        Dim token As String = GetBearerToken()
+        If String.IsNullOrWhiteSpace(token) Then
+            Return New ExemplarUnitProgressResult With {
+                .IsSuccessful = False,
+                .IsConfigured = False,
+                .ErrorMessage = "Profiling API credentials are not configured."
+            }
+        End If
+
+        Dim effectiveQualificationId As String = If(String.IsNullOrWhiteSpace(qualificationId), GetConfiguredQualificationId(), qualificationId.Trim())
+        If String.IsNullOrWhiteSpace(effectiveQualificationId) Then
+            Return New ExemplarUnitProgressResult With {
+                .IsSuccessful = False,
+                .IsConfigured = True,
+                .ErrorMessage = "Qualification ID is not configured."
+            }
+        End If
+
+        Try
+            Dim student As ExemplarUserCandidate = Await FindStudentAsync(token, firstName, lastName, email)
+            If student Is Nothing Then
+                Return New ExemplarUnitProgressResult With {
+                    .IsSuccessful = False,
+                    .IsConfigured = True,
+                    .ErrorMessage = "No matching Exemplar student was found."
+                }
+            End If
+
+            Dim requestedCodes As New HashSet(Of String)(
+                unitCodes.Where(Function(c) Not String.IsNullOrWhiteSpace(c)).
+                Select(Function(c) c.Trim().ToUpperInvariant()),
+                StringComparer.OrdinalIgnoreCase
+            )
+
+            Dim qualificationUrl As String = $"{GetBaseUrl()}/api/v1/users/{Uri.EscapeDataString(student.Id)}/qualifications/{Uri.EscapeDataString(effectiveQualificationId)}"
+            Dim result As New ExemplarUnitProgressResult With {
+                .IsSuccessful = True,
+                .IsConfigured = True,
+                .UserId = student.Id,
+                .QualificationId = effectiveQualificationId
+            }
+
+            Using qualificationDoc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, qualificationUrl, token, Nothing)
+                CollectUnitProgress(qualificationDoc.RootElement, result.Units, requestedCodes, 0)
+            End Using
+
+            For Each requestedCode In requestedCodes
+                If Not result.Units.ContainsKey(requestedCode) Then
+                    result.Units(requestedCode) = New ExemplarUnitProgressItem With {
+                        .UnitCode = requestedCode
+                    }
+                End If
+            Next
+
+            For Each code In requestedCodes
+                Dim unitItem As ExemplarUnitProgressItem = result.Units(code)
+                Dim totalCards As Integer
+                Dim completedCards As Integer
+                If Await TryGetContributingCardCountsAsync(token, student.Id, effectiveQualificationId, code, totalCards, completedCards) Then
+                    unitItem.TotalCards = totalCards
+                    unitItem.CompletedCards = completedCards
+
+                    If Not unitItem.Percentage.HasValue AndAlso totalCards > 0 Then
+                        unitItem.Percentage = Math.Round(CDec((completedCards / totalCards) * 100D), 2)
+                    End If
+                End If
+            Next
+
+            Return result
+        Catch ex As Exception
+            Return New ExemplarUnitProgressResult With {
+                .IsSuccessful = False,
+                .IsConfigured = True,
+                .ErrorMessage = ex.Message
+            }
+        End Try
+    End Function
+
     Public Async Function UpdateQualificationStatusAsync(userId As String, qualificationId As String, statusValue As String) As Task(Of ExemplarQualificationUpdateResult)
         Dim token As String = GetBearerToken()
         If String.IsNullOrWhiteSpace(token) Then
             Return New ExemplarQualificationUpdateResult With {
                 .IsSuccessful = False,
-                .ErrorMessage = "EXEMPLAR_API_TOKEN is not configured."
+                .ErrorMessage = "Profiling API credentials are not configured."
             }
         End If
 
@@ -210,6 +321,119 @@ Module ExemplarProfilingApi
                 Return JsonDocument.Parse(body)
             End Using
         End Using
+    End Function
+
+    Private Async Function TryGetContributingCardCountsAsync(token As String, userId As String, qualificationId As String, unitCode As String, ByRef totalCards As Integer, ByRef completedCards As Integer) As Task(Of Boolean)
+        totalCards = 0
+        completedCards = 0
+        Dim url As String = $"{GetBaseUrl()}/api/v1/users/{Uri.EscapeDataString(userId)}/qualifications/{Uri.EscapeDataString(qualificationId)}/units/{Uri.EscapeDataString(unitCode)}/progression/cards"
+
+        Try
+            Using doc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, url, token, Nothing)
+                Dim statusCounts As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+                CollectStatusCounts(doc.RootElement, statusCounts, 0)
+
+                If statusCounts.Count = 0 Then
+                    Return False
+                End If
+
+                totalCards = statusCounts.Values.Sum()
+                completedCards = statusCounts.
+                    Where(Function(kvp) kvp.Key.IndexOf("APPROVED", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                      kvp.Key.IndexOf("COMPLETE", StringComparison.OrdinalIgnoreCase) >= 0).
+                    Sum(Function(kvp) kvp.Value)
+                Return True
+            End Using
+        Catch
+            Return False
+        End Try
+    End Function
+
+    Private Sub CollectStatusCounts(element As JsonElement, output As Dictionary(Of String, Integer), depth As Integer)
+        If depth > 12 Then
+            Return
+        End If
+
+        Select Case element.ValueKind
+            Case JsonValueKind.Object
+                Dim status As String = GetStringByPossibleKeys(element, New String() {"status", "card_status", "state"})
+                Dim count As Integer
+                If Not String.IsNullOrWhiteSpace(status) AndAlso TryGetIntegerByPossibleKeys(element, New String() {"count", "total", "value"}, count) Then
+                    If output.ContainsKey(status) Then
+                        output(status) += count
+                    Else
+                        output(status) = count
+                    End If
+                End If
+
+                For Each prop As JsonProperty In element.EnumerateObject()
+                    CollectStatusCounts(prop.Value, output, depth + 1)
+                Next
+
+            Case JsonValueKind.Array
+                For Each item As JsonElement In element.EnumerateArray()
+                    CollectStatusCounts(item, output, depth + 1)
+                Next
+        End Select
+    End Sub
+
+    Private Sub CollectUnitProgress(element As JsonElement, output As Dictionary(Of String, ExemplarUnitProgressItem), requestedCodes As HashSet(Of String), depth As Integer)
+        If depth > 12 Then
+            Return
+        End If
+
+        Select Case element.ValueKind
+            Case JsonValueKind.Object
+                Dim codeCandidate As String = GetStringByPossibleKeys(element, New String() {"unit_code", "unitCode", "unit", "unit_id", "unitId"})
+                If LooksLikeUnitCode(codeCandidate) Then
+                    Dim normalizedCode As String = codeCandidate.Trim().ToUpperInvariant()
+                    If requestedCodes Is Nothing OrElse requestedCodes.Contains(normalizedCode) Then
+                        If Not output.ContainsKey(normalizedCode) Then
+                            output(normalizedCode) = New ExemplarUnitProgressItem With {
+                                .UnitCode = normalizedCode
+                            }
+                        End If
+
+                        Dim percentageValue As Decimal
+                        If TryGetDecimalByPossibleKeys(element, New String() {"percentage", "completion_percentage", "completionPercentage", "progress_percentage", "progressPercentage"}, percentageValue) Then
+                            output(normalizedCode).Percentage = percentageValue
+                        End If
+
+                        Dim statusValue As String = GetStringByPossibleKeys(element, New String() {"status", "state", "completion_status"})
+                        If Not String.IsNullOrWhiteSpace(statusValue) Then
+                            output(normalizedCode).Status = statusValue
+                        End If
+                    End If
+                End If
+
+                For Each prop As JsonProperty In element.EnumerateObject()
+                    CollectUnitProgress(prop.Value, output, requestedCodes, depth + 1)
+                Next
+
+            Case JsonValueKind.Array
+                For Each item As JsonElement In element.EnumerateArray()
+                    CollectUnitProgress(item, output, requestedCodes, depth + 1)
+                Next
+        End Select
+    End Sub
+
+    Private Function LooksLikeUnitCode(value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then
+            Return False
+        End If
+
+        Dim candidate As String = value.Trim().ToUpperInvariant()
+        If candidate.Contains(" "c) Then
+            Return False
+        End If
+
+        If candidate.Length < 5 Then
+            Return False
+        End If
+
+        Dim hasLetter As Boolean = candidate.Any(Function(c) Char.IsLetter(c))
+        Dim hasDigit As Boolean = candidate.Any(Function(c) Char.IsDigit(c))
+        Return hasLetter AndAlso hasDigit
     End Function
 
     Private Sub CollectUserCandidates(element As JsonElement, output As List(Of ExemplarUserCandidate), depth As Integer)
@@ -359,6 +583,28 @@ Module ExemplarProfilingApi
         Return False
     End Function
 
+    Private Function TryGetIntegerByPossibleKeys(element As JsonElement, keys As IEnumerable(Of String), ByRef value As Integer) As Boolean
+        For Each key In keys
+            Dim prop As JsonElement
+            If element.TryGetProperty(key, prop) Then
+                Return TryParseInteger(prop, value)
+            End If
+        Next
+
+        Return False
+    End Function
+
+    Private Function TryGetDecimalByPossibleKeys(element As JsonElement, keys As IEnumerable(Of String), ByRef value As Decimal) As Boolean
+        For Each key In keys
+            Dim prop As JsonElement
+            If element.TryGetProperty(key, prop) Then
+                Return TryParseDecimal(prop, value)
+            End If
+        Next
+
+        Return False
+    End Function
+
     Private Function TryParseInteger(value As JsonElement, ByRef result As Integer) As Boolean
         Select Case value.ValueKind
             Case JsonValueKind.Number
@@ -374,6 +620,18 @@ Module ExemplarProfilingApi
 
             Case JsonValueKind.String
                 Return Integer.TryParse(value.GetString(), result)
+        End Select
+
+        Return False
+    End Function
+
+    Private Function TryParseDecimal(value As JsonElement, ByRef result As Decimal) As Boolean
+        Select Case value.ValueKind
+            Case JsonValueKind.Number
+                Return value.TryGetDecimal(result)
+            Case JsonValueKind.String
+                Return Decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, result) OrElse
+                    Decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.CurrentCulture, result)
         End Select
 
         Return False
@@ -402,6 +660,10 @@ Module ExemplarProfilingApi
     End Function
 
     Private Function GetBaseUrl() As String
+        If Not String.IsNullOrWhiteSpace(My.Settings.ExemplarApiBaseUrl) Then
+            Return My.Settings.ExemplarApiBaseUrl.Trim().TrimEnd("/"c)
+        End If
+
         Dim envBase As String = Environment.GetEnvironmentVariable("EXEMPLAR_API_BASE_URL")
         If String.IsNullOrWhiteSpace(envBase) Then
             Return DefaultBaseUrl
@@ -415,7 +677,10 @@ Module ExemplarProfilingApi
             Return CachedToken
         End If
 
-        Dim token As String = Environment.GetEnvironmentVariable("EXEMPLAR_API_TOKEN")
+        Dim token As String = My.Settings.ExemplarApiToken
+        If String.IsNullOrWhiteSpace(token) Then
+            token = Environment.GetEnvironmentVariable("EXEMPLAR_API_TOKEN")
+        End If
         If String.IsNullOrWhiteSpace(token) Then
             token = Environment.GetEnvironmentVariable("EXEMPLAR_BEARER_TOKEN")
         End If

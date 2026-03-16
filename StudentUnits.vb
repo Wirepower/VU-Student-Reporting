@@ -1,4 +1,4 @@
-﻿Imports System.ComponentModel
+Imports System.ComponentModel
 Imports Microsoft.Data.SqlClient
 'Imports System.Data.SqlClient
 Imports Student_Attendance_Reporting
@@ -13,6 +13,8 @@ Imports System.Globalization
 Public Class StudentUnits
     Private connection As SqlConnection
     Friend Shared studentUnitsForm As New StudentUnits()
+    Private ReadOnly unitCheckBoxes As New Dictionary(Of String, CheckBox)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly originalCheckBoxText As New Dictionary(Of CheckBox, String)
 
 
     Private Sub CloseBTN_Click(sender As Object, e As EventArgs) Handles CloseBTN.Click
@@ -429,6 +431,7 @@ Public Class StudentUnits
     Private Sub StudentUnits_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         VersionLBL.Text = MainFrm.VersionLBL.Text
         SelectedStudentLBL.Text = MainFrm.SelectedStudentLBL.Text
+        InitializeUnitCheckBoxMap()
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
         UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -437,6 +440,11 @@ Public Class StudentUnits
         UpdateButtonVisibility()
         PopulateTeacherCombo()
         UpdateLabelWithDatabaseDate()
+        If ExemplarProfilingApi.IsConfigured() Then
+            SetProfilingSummary("Ready to refresh per-unit profiling percentages.", Color.DarkGreen)
+        Else
+            SetProfilingSummary("Profiling API is not configured for this installation.", Color.DarkOrange)
+        End If
         '-------------------------------------------------------------
         'Enable below once Address column is working in SQL database
         TextBox1.Text = MainFrm.Label28.Text
@@ -487,6 +495,73 @@ Public Class StudentUnits
     End Sub
     Private Sub UnitAlertLbl1_Click(sender As Object, e As EventArgs) Handles UnitAlertLbl1.Click
 
+    End Sub
+
+    Private Sub InitializeUnitCheckBoxMap()
+        If unitCheckBoxes.Count > 0 Then
+            Return
+        End If
+
+        For Each cb As CheckBox In {
+            CheckBox1, CheckBox2, CheckBox3, CheckBox4, CheckBox5, CheckBox6, CheckBox7, CheckBox8, CheckBox9, CheckBox10,
+            CheckBox11, CheckBox12, CheckBox13, CheckBox14, CheckBox15, CheckBox16, CheckBox17, CheckBox18, CheckBox19, CheckBox20,
+            CheckBox21, CheckBox22, CheckBox23, CheckBox24, CheckBox25, CheckBox26, CheckBox27, CheckBox28, CheckBox29
+        }
+            originalCheckBoxText(cb) = cb.Text
+            Dim unitCode As String = ExtractUnitCode(cb.Text)
+            If Not String.IsNullOrWhiteSpace(unitCode) AndAlso Not unitCheckBoxes.ContainsKey(unitCode) Then
+                unitCheckBoxes(unitCode) = cb
+            End If
+        Next
+    End Sub
+
+    Private Function ExtractUnitCode(text As String) As String
+        If String.IsNullOrWhiteSpace(text) Then
+            Return ""
+        End If
+
+        Dim parts() As String = text.Split("-"c)
+        If parts.Length = 0 Then
+            Return ""
+        End If
+
+        Return parts(0).Trim().ToUpperInvariant()
+    End Function
+
+    Private Sub SetProfilingSummary(message As String, color As Color)
+        ProfilingSummaryLbl.Text = message
+        ProfilingSummaryLbl.ForeColor = color
+    End Sub
+
+    Private Sub ResetProfilingAnnotations()
+        For Each pair In originalCheckBoxText
+            pair.Key.Text = pair.Value
+        Next
+    End Sub
+
+    Private Sub ApplyUnitProfilingAnnotations(progressResult As ExemplarUnitProgressResult)
+        ResetProfilingAnnotations()
+
+        For Each pair In unitCheckBoxes
+            Dim code As String = pair.Key
+            Dim cb As CheckBox = pair.Value
+            Dim baseText As String = originalCheckBoxText(cb)
+
+            If progressResult.Units.ContainsKey(code) Then
+                Dim unitInfo As ExemplarUnitProgressItem = progressResult.Units(code)
+                Dim percentText As String = "N/A"
+                If unitInfo.Percentage.HasValue Then
+                    percentText = unitInfo.Percentage.Value.ToString("0.##") & "%"
+                End If
+
+                Dim cardsText As String = ""
+                If unitInfo.CompletedCards.HasValue AndAlso unitInfo.TotalCards.HasValue AndAlso unitInfo.TotalCards.Value > 0 Then
+                    cardsText = $" ({unitInfo.CompletedCards.Value}/{unitInfo.TotalCards.Value} cards)"
+                End If
+
+                cb.Text = $"{baseText} | Profiling: {percentText}{cardsText}"
+            End If
+        Next
     End Sub
 
     Private Sub UpdateButtonVisibility()
@@ -632,5 +707,52 @@ Public Class StudentUnits
 
     Private Sub ComboBox1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox1.SelectedIndexChanged
 
+    End Sub
+
+    Private Async Sub RefreshProfilingBtn_Click(sender As Object, e As EventArgs) Handles RefreshProfilingBtn.Click
+        InitializeUnitCheckBoxMap()
+
+        If unitCheckBoxes.Count = 0 Then
+            SetProfilingSummary("No unit checkboxes were found to update.", Color.Maroon)
+            Return
+        End If
+
+        If Not ExemplarProfilingApi.IsConfigured() Then
+            SetProfilingSummary("Profiling API is not configured for this installation.", Color.DarkOrange)
+            Return
+        End If
+
+        Dim qualificationId As String = ExemplarProfilingApi.GetConfiguredQualificationId()
+        If String.IsNullOrWhiteSpace(qualificationId) Then
+            SetProfilingSummary("Profiling qualification ID is not configured.", Color.DarkOrange)
+            Return
+        End If
+
+        RefreshProfilingBtn.Enabled = False
+        Cursor = Cursors.WaitCursor
+        SetProfilingSummary("Refreshing per-unit profiling percentages...", Color.SteelBlue)
+
+        Try
+            Dim result As ExemplarUnitProgressResult = Await ExemplarProfilingApi.GetStudentUnitProgressAsync(
+                MainFrm.StudentFirstnameLBL.Text,
+                MainFrm.StudentSurnameLBL.Text,
+                MainFrm.StudentEmailLBL.Text,
+                qualificationId,
+                unitCheckBoxes.Keys
+            )
+
+            If result.IsSuccessful Then
+                ApplyUnitProfilingAnnotations(result)
+                Dim populated As Integer = result.Units.Values.Count(Function(u) u.Percentage.HasValue)
+                SetProfilingSummary($"Profiling refreshed for {result.Units.Count} units ({populated} with percentages).", Color.DarkGreen)
+            Else
+                SetProfilingSummary("Profiling refresh failed: " & result.ErrorMessage, Color.Maroon)
+            End If
+        Catch ex As Exception
+            SetProfilingSummary("Profiling refresh failed: " & ex.Message, Color.Maroon)
+        Finally
+            Cursor = Cursors.Default
+            RefreshProfilingBtn.Enabled = True
+        End Try
     End Sub
 End Class

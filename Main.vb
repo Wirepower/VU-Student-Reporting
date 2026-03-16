@@ -133,7 +133,7 @@ Public Class MainFrm
             If ExemplarProfilingApi.IsConfigured() Then
                 SetProfilingApiStatus("Ready", "Select a student to load profiling status.", Color.DarkGreen)
             Else
-                SetProfilingApiStatus("Not configured", "Set environment variable EXEMPLAR_API_TOKEN to enable profiling API.", Color.DarkOrange)
+                SetProfilingApiStatus("Not configured", "Profiling API is not configured for this installation.", Color.DarkOrange)
             End If
             'Put Code here - Load Form/application
 

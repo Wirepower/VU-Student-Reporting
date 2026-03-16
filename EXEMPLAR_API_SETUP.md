@@ -2,15 +2,17 @@
 
 The app now includes read-only student profiling lookup against Exemplar APIs.
 
-## Environment variables
+## Configuration (easiest deployment)
 
-Set these on client machines (or user session) before launching the app:
+The app reads profiling settings from `My.Settings` first (built into install), then environment variables as fallback.
 
-- `EXEMPLAR_API_TOKEN` = Bearer token value (without `Bearer ` prefix)
-- `EXEMPLAR_API_BASE_URL` = optional override  
-  default: `https://api.profiling.exemplarsystems.com.au`
+Settings used:
 
-If token is missing, the app keeps normal SQL workflow and shows API as "Not configured".
+- `ExemplarApiToken`
+- `ExemplarApiBaseUrl` (default: `https://api.profiling.exemplarsystems.com.au`)
+- `ExemplarQualificationId`
+
+For easiest rollout to non-technical users, set these values in your release build so users only install and run.
 
 ## Current API usage in app
 
@@ -20,6 +22,13 @@ When a student is selected, app calls:
 2. `GET /api/v1/users/:id/cards/summary`
 
 The result is shown on the main form as a profiling API status line.
+
+On the **Student Units** form, the **Refresh Profiling %** button calls:
+
+1. `GET /api/v1/users/:id/qualifications/:qualificationId`
+2. `GET /api/v1/users/:id/qualifications/:qualificationId/units/:unitCode/progression/cards`
+
+It appends per-unit profiling percentages/cards to each unit checkbox text without changing SQL checkbox state.
 
 ## Completion endpoint support (ready for wiring)
 

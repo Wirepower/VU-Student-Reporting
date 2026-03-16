@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class StudentUnits
     Inherits System.Windows.Forms.Form
 
@@ -70,6 +70,8 @@ Partial Class StudentUnits
         ComboBox1 = New ComboBox()
         Label6 = New Label()
         DateLBL = New Label()
+        RefreshProfilingBtn = New Button()
+        ProfilingSummaryLbl = New Label()
         GroupBox1.SuspendLayout()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -547,6 +549,24 @@ Partial Class StudentUnits
         DateLBL.TabIndex = 103
         DateLBL.TextAlign = ContentAlignment.MiddleCenter
         ' 
+        ' RefreshProfilingBtn
+        ' 
+        RefreshProfilingBtn.Location = New Point(1158, 95)
+        RefreshProfilingBtn.Name = "RefreshProfilingBtn"
+        RefreshProfilingBtn.Size = New Size(171, 46)
+        RefreshProfilingBtn.TabIndex = 104
+        RefreshProfilingBtn.Text = "Refresh Profiling %"
+        RefreshProfilingBtn.UseVisualStyleBackColor = True
+        ' 
+        ' ProfilingSummaryLbl
+        ' 
+        ProfilingSummaryLbl.Location = New Point(246, 326)
+        ProfilingSummaryLbl.Name = "ProfilingSummaryLbl"
+        ProfilingSummaryLbl.Size = New Size(907, 23)
+        ProfilingSummaryLbl.TabIndex = 105
+        ProfilingSummaryLbl.Text = "Profiling data not loaded."
+        ProfilingSummaryLbl.TextAlign = ContentAlignment.MiddleCenter
+        ' 
         ' StudentUnits
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -555,6 +575,8 @@ Partial Class StudentUnits
         AutoSize = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1374, 1006)
+        Controls.Add(ProfilingSummaryLbl)
+        Controls.Add(RefreshProfilingBtn)
         Controls.Add(DateLBL)
         Controls.Add(Label6)
         Controls.Add(ComboBox1)
@@ -656,4 +678,6 @@ Partial Class StudentUnits
     Friend WithEvents ComboBox1 As ComboBox
     Friend WithEvents Label6 As Label
     Friend WithEvents DateLBL As Label
+    Friend WithEvents RefreshProfilingBtn As Button
+    Friend WithEvents ProfilingSummaryLbl As Label
 End Class
