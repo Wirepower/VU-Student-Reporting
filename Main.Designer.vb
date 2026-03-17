@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class MainFrm
     Inherits System.Windows.Forms.Form
 
@@ -106,6 +106,16 @@ Partial Class MainFrm
         MassEmailBtn = New Button()
         Label36 = New Label()
         Label37 = New Label()
+        Label38 = New Label()
+        Label39 = New Label()
+        ProfilingMissingLbl = New Label()
+        ProfilingMissingValLbl = New Label()
+        ProfilingNotVerifiedLbl = New Label()
+        ProfilingNotVerifiedValLbl = New Label()
+        ProfilingEmployerVerifiedLbl = New Label()
+        ProfilingEmployerVerifiedValLbl = New Label()
+        ProfilingLastCardLbl = New Label()
+        ProfilingLastCardValLbl = New Label()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -645,7 +655,7 @@ Partial Class MainFrm
         EmployerBusinessNameLBL.Font = New Font("Segoe UI", 8.25F)
         EmployerBusinessNameLBL.Location = New Point(125, 307)
         EmployerBusinessNameLBL.Name = "EmployerBusinessNameLBL"
-        EmployerBusinessNameLBL.Size = New Size(83, 13)
+        EmployerBusinessNameLBL.Size = New Size(84, 13)
         EmployerBusinessNameLBL.TabIndex = 58
         EmployerBusinessNameLBL.Text = "Business Name"
         EmployerBusinessNameLBL.Visible = False
@@ -742,7 +752,7 @@ Partial Class MainFrm
         Label31.Font = New Font("Segoe UI", 8.25F)
         Label31.Location = New Point(1030, 595)
         Label31.Name = "Label31"
-        Label31.Size = New Size(54, 13)
+        Label31.Size = New Size(53, 13)
         Label31.TabIndex = 71
         Label31.Text = "Unit Title"
         Label31.Visible = False
@@ -872,7 +882,7 @@ Partial Class MainFrm
         BlockGroupLBL.Font = New Font("Segoe UI", 8.25F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         BlockGroupLBL.Location = New Point(71, 250)
         BlockGroupLBL.Name = "BlockGroupLBL"
-        BlockGroupLBL.Size = New Size(67, 13)
+        BlockGroupLBL.Size = New Size(68, 13)
         BlockGroupLBL.TabIndex = 84
         BlockGroupLBL.Text = "BlockGroup"
         BlockGroupLBL.Visible = False
@@ -894,7 +904,7 @@ Partial Class MainFrm
         Label29.Font = New Font("Segoe UI", 8.25F)
         Label29.Location = New Point(16, 363)
         Label29.Name = "Label29"
-        Label29.Size = New Size(105, 13)
+        Label29.Size = New Size(104, 13)
         Label29.TabIndex = 86
         Label29.Text = "Student Telephone"
         Label29.Visible = False
@@ -976,6 +986,111 @@ Partial Class MainFrm
         Label37.TabIndex = 94
         Label37.Text = "Date"
         ' 
+        ' Label38
+        ' 
+        Label38.AutoSize = True
+        Label38.Location = New Point(14, 88)
+        Label38.Name = "Label38"
+        Label38.Size = New Size(99, 21)
+        Label38.TabIndex = 95
+        Label38.Text = "Profiling API:"
+        Label38.Visible = False
+        ' 
+        ' Label39
+        ' 
+        Label39.AutoSize = True
+        Label39.Font = New Font("Segoe UI", 9.75F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        Label39.Location = New Point(17, 109)
+        Label39.Name = "Label39"
+        Label39.Size = New Size(81, 17)
+        Label39.TabIndex = 96
+        Label39.Text = "Not checked"
+        Label39.Visible = False
+        ' 
+        ' ProfilingMissingLbl
+        ' 
+        ProfilingMissingLbl.AutoSize = True
+        ProfilingMissingLbl.ForeColor = Color.Red
+        ProfilingMissingLbl.Location = New Point(156, 532)
+        ProfilingMissingLbl.Name = "ProfilingMissingLbl"
+        ProfilingMissingLbl.Size = New Size(246, 21)
+        ProfilingMissingLbl.TabIndex = 97
+        ProfilingMissingLbl.Text = "Cards not submitted/Outstanding:"
+        ProfilingMissingLbl.Visible = False
+        ' 
+        ' ProfilingMissingValLbl
+        ' 
+        ProfilingMissingValLbl.AutoSize = True
+        ProfilingMissingValLbl.Location = New Point(408, 532)
+        ProfilingMissingValLbl.Name = "ProfilingMissingValLbl"
+        ProfilingMissingValLbl.Size = New Size(17, 21)
+        ProfilingMissingValLbl.TabIndex = 98
+        ProfilingMissingValLbl.Text = "?"
+        ProfilingMissingValLbl.Visible = False
+        ' 
+        ' ProfilingNotVerifiedLbl
+        ' 
+        ProfilingNotVerifiedLbl.AutoSize = True
+        ProfilingNotVerifiedLbl.ForeColor = Color.Orange
+        ProfilingNotVerifiedLbl.Location = New Point(463, 532)
+        ProfilingNotVerifiedLbl.Name = "ProfilingNotVerifiedLbl"
+        ProfilingNotVerifiedLbl.Size = New Size(225, 21)
+        ProfilingNotVerifiedLbl.TabIndex = 99
+        ProfilingNotVerifiedLbl.Text = "Cards Submitted (Not verified):"
+        ProfilingNotVerifiedLbl.Visible = False
+        ' 
+        ' ProfilingNotVerifiedValLbl
+        ' 
+        ProfilingNotVerifiedValLbl.AutoSize = True
+        ProfilingNotVerifiedValLbl.Location = New Point(694, 532)
+        ProfilingNotVerifiedValLbl.Name = "ProfilingNotVerifiedValLbl"
+        ProfilingNotVerifiedValLbl.Size = New Size(17, 21)
+        ProfilingNotVerifiedValLbl.TabIndex = 100
+        ProfilingNotVerifiedValLbl.Text = "?"
+        ProfilingNotVerifiedValLbl.Visible = False
+        ' 
+        ' ProfilingEmployerVerifiedLbl
+        ' 
+        ProfilingEmployerVerifiedLbl.AutoSize = True
+        ProfilingEmployerVerifiedLbl.ForeColor = Color.DarkGreen
+        ProfilingEmployerVerifiedLbl.Location = New Point(723, 532)
+        ProfilingEmployerVerifiedLbl.Name = "ProfilingEmployerVerifiedLbl"
+        ProfilingEmployerVerifiedLbl.Size = New Size(264, 21)
+        ProfilingEmployerVerifiedLbl.TabIndex = 101
+        ProfilingEmployerVerifiedLbl.Text = "Cards submitted (Employer Verified):"
+        ProfilingEmployerVerifiedLbl.Visible = False
+        ' 
+        ' ProfilingEmployerVerifiedValLbl
+        ' 
+        ProfilingEmployerVerifiedValLbl.AutoSize = True
+        ProfilingEmployerVerifiedValLbl.Location = New Point(988, 532)
+        ProfilingEmployerVerifiedValLbl.Name = "ProfilingEmployerVerifiedValLbl"
+        ProfilingEmployerVerifiedValLbl.Size = New Size(17, 21)
+        ProfilingEmployerVerifiedValLbl.TabIndex = 102
+        ProfilingEmployerVerifiedValLbl.Text = "?"
+        ProfilingEmployerVerifiedValLbl.Visible = False
+        ' 
+        ' ProfilingLastCardLbl
+        ' 
+        ProfilingLastCardLbl.AutoSize = True
+        ProfilingLastCardLbl.ForeColor = Color.Blue
+        ProfilingLastCardLbl.Location = New Point(1030, 532)
+        ProfilingLastCardLbl.Name = "ProfilingLastCardLbl"
+        ProfilingLastCardLbl.Size = New Size(163, 21)
+        ProfilingLastCardLbl.TabIndex = 103
+        ProfilingLastCardLbl.Text = "Last Card Submission:"
+        ProfilingLastCardLbl.Visible = False
+        ' 
+        ' ProfilingLastCardValLbl
+        ' 
+        ProfilingLastCardValLbl.AutoSize = True
+        ProfilingLastCardValLbl.Location = New Point(1197, 532)
+        ProfilingLastCardValLbl.Name = "ProfilingLastCardValLbl"
+        ProfilingLastCardValLbl.Size = New Size(17, 21)
+        ProfilingLastCardValLbl.TabIndex = 104
+        ProfilingLastCardValLbl.Text = "?"
+        ProfilingLastCardValLbl.Visible = False
+        ' 
         ' MainFrm
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -984,6 +1099,16 @@ Partial Class MainFrm
         AutoSize = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
+        Controls.Add(ProfilingLastCardValLbl)
+        Controls.Add(ProfilingLastCardLbl)
+        Controls.Add(ProfilingEmployerVerifiedValLbl)
+        Controls.Add(ProfilingEmployerVerifiedLbl)
+        Controls.Add(ProfilingNotVerifiedValLbl)
+        Controls.Add(ProfilingNotVerifiedLbl)
+        Controls.Add(ProfilingMissingValLbl)
+        Controls.Add(ProfilingMissingLbl)
+        Controls.Add(Label39)
+        Controls.Add(Label38)
         Controls.Add(Label37)
         Controls.Add(Label36)
         Controls.Add(MassEmailBtn)
@@ -1158,5 +1283,15 @@ Partial Class MainFrm
     Friend WithEvents MassEmailBtn As Button
     Friend WithEvents Label36 As Label
     Friend WithEvents Label37 As Label
+    Friend WithEvents Label38 As Label
+    Friend WithEvents Label39 As Label
+    Friend WithEvents ProfilingMissingLbl As Label
+    Friend WithEvents ProfilingMissingValLbl As Label
+    Friend WithEvents ProfilingNotVerifiedLbl As Label
+    Friend WithEvents ProfilingNotVerifiedValLbl As Label
+    Friend WithEvents ProfilingEmployerVerifiedLbl As Label
+    Friend WithEvents ProfilingEmployerVerifiedValLbl As Label
+    Friend WithEvents ProfilingLastCardLbl As Label
+    Friend WithEvents ProfilingLastCardValLbl As Label
 
 End Class

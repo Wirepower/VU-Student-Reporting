@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
@@ -151,9 +151,17 @@
       <Generator>VbMyResourcesResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.vb</LastGenOutput>
     </EmbeddedResource>
+    <!-- Exemplar login JARs: ExemplarLogin.jar = production, ExemplarLoginDev.jar = staging. Embed one or both; when EXEMPLAR_API_BASE_URL is set the app uses ExemplarLoginDev.jar if present. -->
+    <EmbeddedResource Include="ExemplarLogin.jar" Condition="Exists('ExemplarLogin.jar')" />
+    <EmbeddedResource Include="ExemplarLoginDev.jar" Condition="Exists('ExemplarLoginDev.jar')" />
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="jre\**\*" Condition="Exists('jre\bin\java.exe')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>jre\%(RecursiveDir)%(Filename)%(Extension)</Link>
+      <Visible>false</Visible>
+    </Content>
     <None Update="LEATemplate.pdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -361,3 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Bundled JRE download (optional; jre folder is used after extract)
+OpenJDK*.zip
