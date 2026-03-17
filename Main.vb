@@ -35,6 +35,7 @@ Public Class MainFrm
     Public employerBusinessName As String
     Public employerEmail As String
     Private template As String = "" ' Declaration at the class level
+    Private _profilingApiToolTip As ToolTip
 
     ' Declare teacher list workbook and worksheet
     Private Sub UpdateReconnectButtonVisibility()
@@ -138,7 +139,7 @@ Public Class MainFrm
             If ExemplarProfilingApi.IsConfigured() Then
                 SetProfilingApiStatus("Ready", "", Color.DarkGreen)
             Else
-                SetProfilingApiStatus("Not configured", "Set environment variable EXEMPLAR_API_TOKEN to enable profiling API.", Color.DarkOrange)
+                SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
             End If
             'Put Code here - Load Form/application
 
@@ -359,6 +360,12 @@ Public Class MainFrm
         Label39.Visible = True
         Label39.Text = If(String.IsNullOrWhiteSpace(detailText), statusText, $"{statusText} | {detailText}")
         Label39.ForeColor = If(statusColor.HasValue, statusColor.Value, Color.Black)
+        If _profilingApiToolTip Is Nothing Then _profilingApiToolTip = New ToolTip()
+        If Not String.IsNullOrWhiteSpace(detailText) Then
+            _profilingApiToolTip.SetToolTip(Label39, detailText)
+        Else
+            _profilingApiToolTip.SetToolTip(Label39, "")
+        End If
         ProfilingMissingLbl.Visible = False
         ProfilingMissingValLbl.Visible = False
         ProfilingNotVerifiedLbl.Visible = False
@@ -376,6 +383,7 @@ Public Class MainFrm
         Label39.Visible = True
         Label39.Text = r.StatusText
         Label39.ForeColor = Color.DarkGreen
+        If _profilingApiToolTip IsNot Nothing Then _profilingApiToolTip.SetToolTip(Label39, "")
         ProfilingMissingLbl.Text = "Cards not submitted/Outstanding:"
         ProfilingMissingLbl.ForeColor = Color.Red
         ProfilingMissingValLbl.Text = If(r.MissingWeeks.HasValue, r.MissingWeeks.Value.ToString(), "?")
@@ -416,7 +424,7 @@ Public Class MainFrm
         Dim lookupResult As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, email)
 
         If Not lookupResult.IsConfigured Then
-            SetProfilingApiStatus("Not configured", lookupResult.DetailText, Color.DarkOrange)
+            SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
             Return
         End If
 

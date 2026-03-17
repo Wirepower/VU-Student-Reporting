@@ -63,6 +63,20 @@ Module ExemplarProfilingApi
         Return Not String.IsNullOrWhiteSpace(GetBearerToken())
     End Function
 
+    ''' <summary>When not configured, returns the reason (e.g. "Login JAR not found", "Java not found") so the UI can show it instead of the generic env-var message.</summary>
+    Public Function GetNotConfiguredReason() As String
+        If String.IsNullOrWhiteSpace(CachedToken) AndAlso String.IsNullOrWhiteSpace(LastTokenRefreshError) Then
+            GetBearerToken()
+        End If
+        If Not String.IsNullOrWhiteSpace(CachedToken) Then
+            Return ""
+        End If
+        If Not String.IsNullOrWhiteSpace(LastTokenRefreshError) Then
+            Return LastTokenRefreshError
+        End If
+        Return "Set EXEMPLAR_API_TOKEN, or ensure ExemplarLogin.jar is in the app folder and Java is installed (or add a jre folder next to the app)."
+    End Function
+
     Public Sub SetBearerToken(token As String)
         If String.IsNullOrWhiteSpace(token) Then
             CachedToken = Nothing
@@ -124,6 +138,10 @@ Module ExemplarProfilingApi
                 Dim missingWeeks As Integer? = GetIntegerByPath(cardsDoc.RootElement, "card_submission.missing_weeks")  ' Cards not submitted/Outstanding
                 Dim submittedNotVerified As Integer? = GetIntegerByPath(cardsDoc.RootElement, "card_status_counts[0].count")  ' Cards Submitted (Not verified)
                 Dim submittedEmployerVerified As Integer? = GetIntegerByPath(cardsDoc.RootElement, "card_status_counts[1].count")  ' Cards submitted (Employer Verified)
+                ' Fallback: API may return card_status_counts in different order; resolve by status name
+                If (Not submittedNotVerified.HasValue OrElse Not submittedEmployerVerified.HasValue) Then
+                    GetCardStatusCountsFromArray(cardsDoc.RootElement, submittedNotVerified, submittedEmployerVerified)
+                End If
 
                 Dim missingNum As String = If(missingWeeks.HasValue, missingWeeks.Value.ToString(), "?")
                 Dim notVerifiedNum As String = If(submittedNotVerified.HasValue, submittedNotVerified.Value.ToString(), "?")
@@ -191,6 +209,9 @@ Module ExemplarProfilingApi
             Dim detail As String = "Unable to retrieve profiling summary."
             If Not String.IsNullOrWhiteSpace(ex.Message) Then
                 detail &= " " & ex.Message
+            End If
+            If ex.InnerException IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(ex.InnerException.Message) Then
+                detail &= " (" & ex.InnerException.Message & ")"
             End If
             Return New ExemplarProfileLookupResult With {
                 .IsSuccessful = False,
@@ -559,6 +580,32 @@ Module ExemplarProfilingApi
         End Select
     End Function
 
+    ''' <summary>Fills notVerified and employerVerified from card_status_counts array by matching status/name (when index-based paths fail).</summary>
+    Private Sub GetCardStatusCountsFromArray(root As JsonElement, ByRef notVerified As Integer?, ByRef employerVerified As Integer?)
+        Dim arr As JsonElement
+        If Not root.TryGetProperty("card_status_counts", arr) OrElse arr.ValueKind <> JsonValueKind.Array Then
+            Return
+        End If
+        For Each item As JsonElement In arr.EnumerateArray()
+            If item.ValueKind <> JsonValueKind.Object Then Continue For
+            Dim count As Integer? = Nothing
+            Dim countProp As JsonElement
+            If item.TryGetProperty("count", countProp) Then
+                Dim c As Integer
+                If TryParseInteger(countProp, c) Then count = c
+            End If
+            If Not count.HasValue Then Continue For
+            Dim status As String = GetStringByPossibleKeys(item, New String() {"status", "name", "status_name", "type"})
+            If String.IsNullOrWhiteSpace(status) Then Continue For
+            Dim s As String = status.Trim().ToUpperInvariant()
+            If (s.Contains("NOT_VERIFIED") OrElse s.Contains("SUBMITTED") OrElse s = "PENDING") AndAlso Not notVerified.HasValue Then
+                notVerified = count
+            ElseIf (s.Contains("EMPLOYER_VERIFIED") OrElse s.Contains("VERIFIED") OrElse s = "APPROVED") AndAlso Not employerVerified.HasValue Then
+                employerVerified = count
+            End If
+        Next
+    End Sub
+
     ''' <summary>Gets an integer by path, e.g. "card_submission.missing_weeks" or "card_status_counts[0].count".</summary>
     Private Function GetIntegerByPath(root As JsonElement, path As String) As Integer?
         If String.IsNullOrWhiteSpace(path) Then Return Nothing
@@ -728,7 +775,12 @@ Module ExemplarProfilingApi
                     proc.StartInfo.StandardOutputEncoding = Encoding.UTF8
                     proc.StartInfo.EnvironmentVariables("username") = username
                     proc.StartInfo.EnvironmentVariables("password") = password
-                    proc.Start()
+                    Try
+                        proc.Start()
+                    Catch ex As System.ComponentModel.Win32Exception When ex.NativeErrorCode = 2
+                        LastTokenRefreshError = "Java not found. Install Java (e.g. from https://adoptium.net), add it to PATH or set JAVA_HOME, or place a jre folder next to this app."
+                        Return ""
+                    End Try
                     Dim output As String = proc.StandardOutput.ReadToEnd()
                     Dim errOut As String = proc.StandardError.ReadToEnd()
                     proc.WaitForExit(15000)
@@ -756,20 +808,53 @@ Module ExemplarProfilingApi
         Return ""
     End Function
 
-    ''' <summary>Returns path to java.exe: bundled JRE next to the app (jre\bin\java.exe or runtime\bin\java.exe), or "java" to use system PATH. See EXEMPLAR_API_SETUP.md for how to bundle a JRE.</summary>
+    ''' <summary>Returns path to java.exe: bundled JRE (app dir or parent dirs), then JAVA_HOME, then common install folders (Java 25, Microsoft, Adoptium, etc.), then "java" (PATH).</summary>
     Private Function GetJavaExecutablePath() As String
         Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
-        Dim candidates As New List(Of String) From {
-            Path.Combine(baseDir, "jre", "bin", "java.exe"),
-            Path.Combine(baseDir, "runtime", "bin", "java.exe"),
-            Path.Combine(baseDir, "jdk", "bin", "java.exe")
-        }
-        For Each candidate As String In candidates
-            If File.Exists(candidate) Then
-                Return candidate
-            End If
+        ' 1. Bundled JRE: next to exe, then parent folders (so jre in project root is found when running from bin\Debug\net8.0-windows)
+        Dim dirsToCheck As New List(Of String) From {baseDir}
+        Dim parent As String = Path.GetDirectoryName(baseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        For i As Integer = 0 To 4
+            If String.IsNullOrEmpty(parent) Then Exit For
+            dirsToCheck.Add(parent)
+            parent = Path.GetDirectoryName(parent)
         Next
-        ' Fall back to system Java (must be on PATH)
+        For Each dir As String In dirsToCheck
+            If String.IsNullOrEmpty(dir) OrElse Not Directory.Exists(dir) Then Continue For
+            For Each rel As String In New String() {"jre\bin\java.exe", "runtime\bin\java.exe", "jdk\bin\java.exe"}
+                Dim exe As String = Path.Combine(dir, rel)
+                If File.Exists(exe) Then Return exe
+            Next
+        Next
+        ' 2. JAVA_HOME
+        Dim javaHome As String = Environment.GetEnvironmentVariable("JAVA_HOME")?.Trim()
+        If Not String.IsNullOrEmpty(javaHome) Then
+            Dim exe As String = Path.Combine(javaHome, "bin", "java.exe")
+            If File.Exists(exe) Then Return exe
+            exe = Path.Combine(javaHome, "jre", "bin", "java.exe")
+            If File.Exists(exe) Then Return exe
+        End If
+        ' 3. Common install locations (Java folder, Microsoft OpenJDK, Eclipse Adoptium - includes Java 25)
+        For Each base As String In New String() {
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles),
+            Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86)
+        }
+            For Each folderName As String In New String() {"Java", "Microsoft", "Eclipse Adoptium", "Adoptium", "Amazon Corretto"}
+                Dim javaDir As String = Path.Combine(base, folderName)
+                If Not Directory.Exists(javaDir) Then Continue For
+                Try
+                    For Each subDir As String In Directory.GetDirectories(javaDir)
+                        Dim exe As String = Path.Combine(subDir, "bin", "java.exe")
+                        If File.Exists(exe) Then Return exe
+                        exe = Path.Combine(subDir, "jre", "bin", "java.exe")
+                        If File.Exists(exe) Then Return exe
+                    Next
+                Catch
+                    ' Ignore access or path errors
+                End Try
+            Next
+        Next
+        ' 4. Fall back to system Java (must be on PATH)
         Return "java"
     End Function
 
@@ -822,21 +907,31 @@ Module ExemplarProfilingApi
             Return envPath
         End If
 
-        ' 3. App directory: ExemplarLogin.jar (production), ExemplarLoginDev.jar (staging); fallback to legacy filenames
+        ' 3. App directory, then parent folders (so JAR in project root is found when running from bin\Debug\net8.0-windows)
         Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
-        Dim devPath As String = Path.Combine(baseDir, "ExemplarLoginDev.jar")
-        Dim prodPath As String = Path.Combine(baseDir, "ExemplarLogin.jar")
-        If useStagingJar Then
-            If File.Exists(devPath) Then Return devPath
-            If File.Exists(prodPath) Then Return prodPath
-        Else
-            If File.Exists(prodPath) Then Return prodPath
-            If File.Exists(devPath) Then Return devPath
-        End If
-        Dim legacyStaging As String = Path.Combine(baseDir, "eprofiling-user-login-1.0-staging.jar")
-        Dim legacyProd As String = Path.Combine(baseDir, "eprofiling-user-login-1.0.jar")
-        If File.Exists(legacyStaging) Then Return legacyStaging
-        If File.Exists(legacyProd) Then Return legacyProd
+        Dim dirsToCheck As New List(Of String) From {baseDir}
+        Dim parent As String = Path.GetDirectoryName(baseDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar))
+        For i As Integer = 0 To 4
+            If String.IsNullOrEmpty(parent) Then Exit For
+            dirsToCheck.Add(parent)
+            parent = Path.GetDirectoryName(parent)
+        Next
+        For Each dir As String In dirsToCheck
+            If String.IsNullOrEmpty(dir) OrElse Not Directory.Exists(dir) Then Continue For
+            Dim devPath As String = Path.Combine(dir, "ExemplarLoginDev.jar")
+            Dim prodPath As String = Path.Combine(dir, "ExemplarLogin.jar")
+            If useStagingJar Then
+                If File.Exists(devPath) Then Return devPath
+                If File.Exists(prodPath) Then Return prodPath
+            Else
+                If File.Exists(prodPath) Then Return prodPath
+                If File.Exists(devPath) Then Return devPath
+            End If
+            Dim legacyStaging As String = Path.Combine(dir, "eprofiling-user-login-1.0-staging.jar")
+            Dim legacyProd As String = Path.Combine(dir, "eprofiling-user-login-1.0.jar")
+            If File.Exists(legacyStaging) Then Return legacyStaging
+            If File.Exists(legacyProd) Then Return legacyProd
+        Next
 
         Return ""
     End Function
