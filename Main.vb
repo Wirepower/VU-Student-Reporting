@@ -130,7 +130,7 @@ Public Class MainFrm
             ResetApptrainData()
             UpdateStudentDatabaseLabel()
             If ExemplarProfilingApi.IsConfigured() Then
-                SetProfilingApiStatus("Ready", "Select a student to load profiling status.", Color.DarkGreen)
+                SetProfilingApiStatus("Ready", "", Color.DarkGreen)
             Else
                 SetProfilingApiStatus("Not configured", "Set environment variable EXEMPLAR_API_TOKEN to enable profiling API.", Color.DarkOrange)
             End If
@@ -205,8 +205,8 @@ Public Class MainFrm
             ' Close the loading form once loading is finished
             loadingForm.Close()
 
-            ' Stage 2 OTA: check for mandatory updates on startup.
-            CheckForUpdatesAsync(showNoUpdateMessage:=False).GetAwaiter().GetResult()
+            ' Stage 2 OTA: check for updates on startup (async so UI thread is not blocked and main form can appear).
+            BeginInvoke(New MethodInvoker(Sub() RunStartupUpdateCheckAsync()))
         Else
             Me.Hide()
             SQLError.Show()
@@ -233,6 +233,11 @@ Public Class MainFrm
             ' Handle any errors that occur during the download or execution
             MessageBox.Show("An error occurred while downloading or executing the update.", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
+    End Sub
+
+    ''' <summary>Runs the startup update check without blocking the form load (avoids deadlock).</summary>
+    Private Async Sub RunStartupUpdateCheckAsync()
+        Await CheckForUpdatesAsync(showNoUpdateMessage:=False)
     End Sub
 
     Private Async Function CheckForUpdatesAsync(showNoUpdateMessage As Boolean) As Task
@@ -331,6 +336,47 @@ Public Class MainFrm
         Label39.Visible = True
         Label39.Text = If(String.IsNullOrWhiteSpace(detailText), statusText, $"{statusText} | {detailText}")
         Label39.ForeColor = If(statusColor.HasValue, statusColor.Value, Color.Black)
+        ProfilingMissingLbl.Visible = False
+        ProfilingMissingValLbl.Visible = False
+        ProfilingNotVerifiedLbl.Visible = False
+        ProfilingNotVerifiedValLbl.Visible = False
+        ProfilingEmployerVerifiedLbl.Visible = False
+        ProfilingEmployerVerifiedValLbl.Visible = False
+        ProfilingLastCardLbl.Visible = False
+        ProfilingLastCardValLbl.Visible = False
+    End Sub
+
+    ''' <summary>Shows Connected in its own label and the card stats in separate colored labels (move them in the Designer).</summary>
+    Private Sub SetProfilingApiStatusDetailed(r As ExemplarProfileLookupResult)
+        Label38.Text = "Profiling API:"
+        Label38.Visible = True
+        Label39.Visible = True
+        Label39.Text = r.StatusText
+        Label39.ForeColor = Color.DarkGreen
+        ProfilingMissingLbl.Text = "Cards not submitted/Outstanding:"
+        ProfilingMissingLbl.ForeColor = Color.Red
+        ProfilingMissingValLbl.Text = If(r.MissingWeeks.HasValue, r.MissingWeeks.Value.ToString(), "?")
+        ProfilingMissingValLbl.ForeColor = Color.Black
+        ProfilingNotVerifiedLbl.Text = "Cards Submitted (Not verified):"
+        ProfilingNotVerifiedLbl.ForeColor = Color.Orange
+        ProfilingNotVerifiedValLbl.Text = If(r.SubmittedNotVerified.HasValue, r.SubmittedNotVerified.Value.ToString(), "?")
+        ProfilingNotVerifiedValLbl.ForeColor = Color.Black
+        ProfilingEmployerVerifiedLbl.Text = "Cards submitted (Employer Verified):"
+        ProfilingEmployerVerifiedLbl.ForeColor = Color.DarkGreen
+        ProfilingEmployerVerifiedValLbl.Text = If(r.SubmittedEmployerVerified.HasValue, r.SubmittedEmployerVerified.Value.ToString(), "?")
+        ProfilingEmployerVerifiedValLbl.ForeColor = Color.Black
+        ProfilingLastCardLbl.Text = "Last Card Submission:"
+        ProfilingLastCardLbl.ForeColor = Color.Blue
+        ProfilingLastCardValLbl.Text = If(String.IsNullOrEmpty(r.LastCardFormatted), "?", r.LastCardFormatted)
+        ProfilingLastCardValLbl.ForeColor = Color.Black
+        ProfilingMissingLbl.Visible = True
+        ProfilingMissingValLbl.Visible = True
+        ProfilingNotVerifiedLbl.Visible = True
+        ProfilingNotVerifiedValLbl.Visible = True
+        ProfilingEmployerVerifiedLbl.Visible = True
+        ProfilingEmployerVerifiedValLbl.Visible = True
+        ProfilingLastCardLbl.Visible = True
+        ProfilingLastCardValLbl.Visible = True
     End Sub
 
     Private Async Function RefreshSelectedStudentProfilingAsync() As Task
@@ -352,7 +398,25 @@ Public Class MainFrm
         End If
 
         If lookupResult.IsSuccessful Then
-            SetProfilingApiStatus("Connected", lookupResult.DetailText, Color.DarkGreen)
+            SetProfilingApiStatusDetailed(lookupResult)
+        ElseIf lookupResult.StatusText = "Student not found" Then
+            Dim profilingEmail As String = InputBox(
+                "No matching Exemplar student was found for " & firstName & " " & lastName & "." & vbCrLf & vbCrLf &
+                "Enter the student's Exemplar profiling email address to try again (or leave blank to skip):",
+                "Profiling email",
+                ""
+            )
+            If Not String.IsNullOrWhiteSpace(profilingEmail) Then
+                SetProfilingApiStatus("Checking", "Retrying with profiling email...", Color.SteelBlue)
+                lookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, profilingEmail.Trim())
+                If lookupResult.IsSuccessful Then
+                    SetProfilingApiStatusDetailed(lookupResult)
+                Else
+                    SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
+                End If
+            Else
+                SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
+            End If
         Else
             SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
         End If
