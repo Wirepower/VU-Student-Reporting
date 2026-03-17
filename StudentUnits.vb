@@ -1,4 +1,4 @@
-﻿Imports System.ComponentModel
+Imports System.ComponentModel
 Imports Microsoft.Data.SqlClient
 'Imports System.Data.SqlClient
 Imports Student_Attendance_Reporting
@@ -530,6 +530,40 @@ Public Class StudentUnits
 
         End If
     End Sub
+    ''' <summary>Collects the form field position (page + rectangle) for a stamp so we can draw the image on top after flattening.</summary>
+    Private Sub CollectStampPosition(form As AcroFields, fieldName As String, outPositions As List(Of Tuple(Of Integer, Rectangle)))
+        Try
+            Dim positions = form.GetFieldPositions(fieldName)
+            If positions Is Nothing OrElse positions.Count = 0 Then Return
+            Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
+            outPositions.Add(Tuple.Create(fp.page, fp.position))
+        Catch
+            ' Field may not exist or have different name (e.g. "Stamp 1"); try partial name match
+            Try
+                For Each key As String In form.Fields.Keys
+                    If key.IndexOf("Stamp1", StringComparison.OrdinalIgnoreCase) >= 0 AndAlso fieldName = "Stamp1" Then
+                        Dim positions = form.GetFieldPositions(key)
+                        If positions IsNot Nothing AndAlso positions.Count > 0 Then
+                            Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
+                            outPositions.Add(Tuple.Create(fp.page, fp.position))
+                            Return
+                        End If
+                    End If
+                    If key.IndexOf("Stamp2", StringComparison.OrdinalIgnoreCase) >= 0 AndAlso fieldName = "Stamp2" Then
+                        Dim positions = form.GetFieldPositions(key)
+                        If positions IsNot Nothing AndAlso positions.Count > 0 Then
+                            Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
+                            outPositions.Add(Tuple.Create(fp.page, fp.position))
+                            Return
+                        End If
+                    End If
+                Next
+            Catch
+                ' Ignore
+            End Try
+        End Try
+    End Sub
+
     Public Sub PopulatePdfWithParameters()
         Dim templatePath As String = "LEATemplate.pdf"
         Dim outputDirectory As String = "P:\VUPoly\MT&T\IT, Electrical And Engineering\Submitted LEA Authorisation Forms"
@@ -542,33 +576,68 @@ Public Class StudentUnits
                 Directory.CreateDirectory(outputDirectory)
             End If
 
+            ' Pass 1: fill form and flatten to memory so stamps can be drawn on top in pass 2
+            Dim flattenedBytes As Byte()
             Using reader As New PdfReader(templatePath)
-                Using stamper As New PdfStamper(reader, New FileStream(outputPath, FileMode.Create))
-                    Dim form As AcroFields = stamper.AcroFields
+                Using memStream As New MemoryStream()
+                    Using stamper As New PdfStamper(reader, memStream)
+                        Dim form As AcroFields = stamper.AcroFields
 
-                    Dim fullName As String = MainFrm.StudentFirstnameLBL.Text & " " & MainFrm.StudentSurnameLBL.Text
-                    form.SetField("FullName", fullName)
-                    form.SetField("Address", TextBox1.Text)
-                    form.SetField("Email", MainFrm.StudentEmailLBL.Text)
-                    form.SetField("Telephone", MainFrm.Label29.Text)
-                    form.SetField("Epsilon", MainFrm.Label34.Text)
-                    form.SetField("Address", TextBox1.Text)
+                        Dim fullName As String = MainFrm.StudentFirstnameLBL.Text & " " & MainFrm.StudentSurnameLBL.Text
+                        form.SetField("FullName", fullName)
+                        form.SetField("Address", TextBox1.Text)
+                        form.SetField("Email", MainFrm.StudentEmailLBL.Text)
+                        form.SetField("Telephone", MainFrm.Label29.Text)
+                        form.SetField("Epsilon", MainFrm.Label34.Text)
+                        form.SetField("Address", TextBox1.Text)
 
-                    'Section 1
-                    If CheckBox40.Checked Then
-                        form.SetField("TeacherName", ComboBox1.Text)
-                        form.SetField("Date", Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
-                        form.SetField("TeacherName2", "")
-                        form.SetField("Date2", "")
+                        'Section 1
+                        If CheckBox40.Checked Then
+                            form.SetField("TeacherName", ComboBox1.Text)
+                            form.SetField("Date", Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
+                            form.SetField("TeacherName2", "")
+                            form.SetField("Date2", "")
+                        End If
+
+                        'Section 2
+                        If CheckBox41.Checked Then
+                            form.SetField("TeacherName2", ComboBox1.Text)
+                            form.SetField("Date2", Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
+                        End If
+
+                        stamper.FormFlattening = True
+                    End Using
+                    flattenedBytes = memStream.ToArray()
+                End Using
+            End Using
+
+            ' Pass 2: get stamp positions from original, then add stamp images on top of flattened PDF
+            Dim stampPath As String = System.IO.Path.Combine(Application.StartupPath, "VU Stamp.png")
+            If Not File.Exists(stampPath) Then stampPath = System.IO.Path.Combine(Application.StartupPath, "VU Stamp.jpg")
+            If Not File.Exists(stampPath) Then stampPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(templatePath), "VU Stamp.png")
+            If Not File.Exists(stampPath) Then stampPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(templatePath), "VU Stamp.jpg")
+
+            Dim stampPositions As New List(Of Tuple(Of Integer, Rectangle))
+            Using readerForPos As New PdfReader(templatePath)
+                Using stamperPos As New PdfStamper(readerForPos, New MemoryStream())
+                    Dim formPos As AcroFields = stamperPos.AcroFields
+                    If CheckBox40.Checked Then CollectStampPosition(formPos, "Stamp1", stampPositions)
+                    If CheckBox41.Checked Then CollectStampPosition(formPos, "Stamp2", stampPositions)
+                End Using
+            End Using
+
+            Using readerFlattened As New PdfReader(flattenedBytes)
+                Using stamper2 As New PdfStamper(readerFlattened, New FileStream(outputPath, FileMode.Create))
+                    If File.Exists(stampPath) AndAlso stampPositions.Count > 0 Then
+                        For Each pos In stampPositions
+                            Dim img As Image = Image.GetInstance(stampPath)
+                            Dim pageNum As Integer = pos.Item1
+                            Dim rect As Rectangle = pos.Item2
+                            img.ScaleToFit(rect.Width, rect.Height)
+                            img.SetAbsolutePosition(rect.Left + (rect.Width - img.ScaledWidth) / 2, rect.Bottom + (rect.Height - img.ScaledHeight) / 2)
+                            stamper2.GetOverContent(pageNum).AddImage(img)
+                        Next
                     End If
-
-                    'Section 2
-                    If CheckBox41.Checked Then
-                        form.SetField("TeacherName2", ComboBox1.Text)
-                        form.SetField("Date2", Today.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture))
-                    End If
-
-                    stamper.FormFlattening = True
                 End Using
             End Using
             PdfHelper.OpenPdfWithDefaultViewer(outputPath)
