@@ -1,4 +1,4 @@
-﻿Imports System.ComponentModel
+Imports System.ComponentModel
 Imports System.IO
 Imports Microsoft.Data.SqlClient
 Imports Microsoft.Win32
@@ -129,6 +129,11 @@ Public Class MainFrm
             PopulateEmailSubjectComboBox()
             ResetApptrainData()
             UpdateStudentDatabaseLabel()
+            If ExemplarProfilingApi.IsConfigured() Then
+                SetProfilingApiStatus("Ready", "", Color.DarkGreen)
+            Else
+                SetProfilingApiStatus("Not configured", "Set environment variable EXEMPLAR_API_TOKEN to enable profiling API.", Color.DarkOrange)
+            End If
             'Put Code here - Load Form/application
 
             currentStep = 25
@@ -200,18 +205,8 @@ Public Class MainFrm
             ' Close the loading form once loading is finished
             loadingForm.Close()
 
-            ' Check for updates when the form loads
-            If UpdateModule.IsUpdateAvailable() Then
-                ' Prompt the user to update
-                Dim result As DialogResult = MessageBox.Show("An update Is available. Do you want to download And install it?", "Update Available", MessageBoxButtons.YesNo)
-                If result = DialogResult.Yes Then
-                    ' Implement download and install update logic here if user chooses to update
-                    ' For example, call a method to download and install the update
-                    DownloadAndUpdate()
-                Else
-                    ' Continue loading the form or perform other actions if no update is available
-                End If
-            End If
+            ' Stage 2 OTA: check for updates on startup (async so UI thread is not blocked and main form can appear).
+            BeginInvoke(New MethodInvoker(Sub() RunStartupUpdateCheckAsync()))
         Else
             Me.Hide()
             SQLError.Show()
@@ -240,22 +235,195 @@ Public Class MainFrm
         End Try
     End Sub
 
-    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        ' Perform update check when the button is clicked
+    ''' <summary>Runs the startup update check without blocking the form load (avoids deadlock).</summary>
+    Private Async Sub RunStartupUpdateCheckAsync()
+        Await CheckForUpdatesAsync(showNoUpdateMessage:=False)
+    End Sub
+
+    Private Async Function CheckForUpdatesAsync(showNoUpdateMessage As Boolean) As Task
+        Try
+            Dim gitHubResult As GitHubUpdateCheckResult = Await UpdateModule.CheckForGitHubUpdateAsync()
+            If gitHubResult.IsSuccessful Then
+                Dim latestTag As String = If(gitHubResult.LatestRelease?.TagName, "(unknown)")
+
+                If gitHubResult.IsMandatory Then
+                    MessageBox.Show(
+                        "A mandatory application update is required." & vbCrLf &
+                        gitHubResult.MandatoryReason & vbCrLf & vbCrLf &
+                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
+                        "Required/latest release: " & latestTag & vbCrLf & vbCrLf &
+                        "The updater will start now.",
+                        "Mandatory Update Required",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning
+                    )
+
+                    Dim mandatoryInstall As GitHubUpdateInstallResult = Await UpdateModule.DownloadAndLaunchGitHubUpdateAsync(gitHubResult)
+                    If mandatoryInstall.IsSuccessful Then
+                        MessageBox.Show("Update launched successfully. The application will now close so the update can complete.", "Update In Progress", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                    Else
+                        MessageBox.Show(
+                            "Unable to launch the mandatory updater." & vbCrLf &
+                            mandatoryInstall.ErrorMessage & vbCrLf & vbCrLf &
+                            "The application will now close to prevent running an out-of-date version.",
+                            "Mandatory Update Failed",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Error
+                        )
+                    End If
+
+                    System.Windows.Forms.Application.Exit()
+                    Return
+                End If
+
+                If gitHubResult.IsUpdateAvailable Then
+                    Dim releaseUrl As String = If(String.IsNullOrWhiteSpace(gitHubResult.LatestRelease?.HtmlUrl),
+                                                  "https://github.com/Wirepower/VU-Student-Reporting/releases",
+                                                  gitHubResult.LatestRelease.HtmlUrl)
+                    Dim promptResult As DialogResult = MessageBox.Show(
+                        "A newer GitHub release is available." & vbCrLf &
+                        "Current release: " & gitHubResult.CurrentTag & vbCrLf &
+                        "Latest release: " & latestTag & vbCrLf & vbCrLf &
+                        "Release notes: " & releaseUrl & vbCrLf & vbCrLf &
+                        "Do you want to download and launch this update now?",
+                        "Update Available",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information
+                    )
+
+                    If promptResult = DialogResult.Yes Then
+                        Dim installResult As GitHubUpdateInstallResult = Await UpdateModule.DownloadAndLaunchGitHubUpdateAsync(gitHubResult)
+                        If installResult.IsSuccessful Then
+                            MessageBox.Show("Update launched successfully. The application will close so the update can complete.", "Update In Progress", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                            System.Windows.Forms.Application.Exit()
+                        Else
+                            MessageBox.Show("The update could not be launched." & vbCrLf & installResult.ErrorMessage, "Update Failed", MessageBoxButtons.OK, MessageBoxIcon.Error)
+                        End If
+                    End If
+
+                    Return
+                End If
+
+                If showNoUpdateMessage Then
+                    MessageBox.Show(
+                        "You are currently on the latest configured release tag (" & gitHubResult.CurrentTag & ").",
+                        "No Update Available",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information
+                    )
+                End If
+
+                Return
+            End If
+        Catch
+            ' Continue to legacy updater fallback below.
+        End Try
+
+        ' Legacy SQL/P-drive update path fallback remains available.
         If UpdateModule.IsUpdateAvailable() Then
-            ' Prompt the user to update
             Dim result As DialogResult = MessageBox.Show("An update is available. Do you want to download and install it?", "Update Available", MessageBoxButtons.YesNo)
             If result = DialogResult.Yes Then
-                ' Implement download and install update logic here if user chooses to update
                 DownloadAndUpdate()
             End If
-        Else
-            ' Inform the user that no update is available
-            MessageBox.Show("Your application is up to date.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
+        ElseIf showNoUpdateMessage Then
+            MessageBox.Show("No updates found via GitHub or the legacy update path.", "No Update Available", MessageBoxButtons.OK, MessageBoxIcon.Information)
         End If
-        'CheckVersionAndDisplayInfo()
-        ' Your existing Button1 click event handler code
-        ' This will only execute when Button1 is clicked
+    End Function
+
+    Private Sub SetProfilingApiStatus(statusText As String, detailText As String, Optional statusColor As Color? = Nothing)
+        Label38.Text = "Profiling API:"
+        Label38.Visible = True
+        Label39.Visible = True
+        Label39.Text = If(String.IsNullOrWhiteSpace(detailText), statusText, $"{statusText} | {detailText}")
+        Label39.ForeColor = If(statusColor.HasValue, statusColor.Value, Color.Black)
+        ProfilingMissingLbl.Visible = False
+        ProfilingMissingValLbl.Visible = False
+        ProfilingNotVerifiedLbl.Visible = False
+        ProfilingNotVerifiedValLbl.Visible = False
+        ProfilingEmployerVerifiedLbl.Visible = False
+        ProfilingEmployerVerifiedValLbl.Visible = False
+        ProfilingLastCardLbl.Visible = False
+        ProfilingLastCardValLbl.Visible = False
+    End Sub
+
+    ''' <summary>Shows Connected in its own label and the card stats in separate colored labels (move them in the Designer).</summary>
+    Private Sub SetProfilingApiStatusDetailed(r As ExemplarProfileLookupResult)
+        Label38.Text = "Profiling API:"
+        Label38.Visible = True
+        Label39.Visible = True
+        Label39.Text = r.StatusText
+        Label39.ForeColor = Color.DarkGreen
+        ProfilingMissingLbl.Text = "Cards not submitted/Outstanding:"
+        ProfilingMissingLbl.ForeColor = Color.Red
+        ProfilingMissingValLbl.Text = If(r.MissingWeeks.HasValue, r.MissingWeeks.Value.ToString(), "?")
+        ProfilingMissingValLbl.ForeColor = Color.Black
+        ProfilingNotVerifiedLbl.Text = "Cards Submitted (Not verified):"
+        ProfilingNotVerifiedLbl.ForeColor = Color.Orange
+        ProfilingNotVerifiedValLbl.Text = If(r.SubmittedNotVerified.HasValue, r.SubmittedNotVerified.Value.ToString(), "?")
+        ProfilingNotVerifiedValLbl.ForeColor = Color.Black
+        ProfilingEmployerVerifiedLbl.Text = "Cards submitted (Employer Verified):"
+        ProfilingEmployerVerifiedLbl.ForeColor = Color.DarkGreen
+        ProfilingEmployerVerifiedValLbl.Text = If(r.SubmittedEmployerVerified.HasValue, r.SubmittedEmployerVerified.Value.ToString(), "?")
+        ProfilingEmployerVerifiedValLbl.ForeColor = Color.Black
+        ProfilingLastCardLbl.Text = "Last Card Submission:"
+        ProfilingLastCardLbl.ForeColor = Color.Blue
+        ProfilingLastCardValLbl.Text = If(String.IsNullOrEmpty(r.LastCardFormatted), "?", r.LastCardFormatted)
+        ProfilingLastCardValLbl.ForeColor = Color.Black
+        ProfilingMissingLbl.Visible = True
+        ProfilingMissingValLbl.Visible = True
+        ProfilingNotVerifiedLbl.Visible = True
+        ProfilingNotVerifiedValLbl.Visible = True
+        ProfilingEmployerVerifiedLbl.Visible = True
+        ProfilingEmployerVerifiedValLbl.Visible = True
+        ProfilingLastCardLbl.Visible = True
+        ProfilingLastCardValLbl.Visible = True
+    End Sub
+
+    Private Async Function RefreshSelectedStudentProfilingAsync() As Task
+        Dim firstName As String = StudentFirstnameLBL.Text?.Trim()
+        Dim lastName As String = StudentSurnameLBL.Text?.Trim()
+        Dim email As String = StudentEmailLBL.Text?.Trim()
+
+        If String.IsNullOrWhiteSpace(firstName) OrElse String.IsNullOrWhiteSpace(lastName) Then
+            SetProfilingApiStatus("Waiting", "Select a student to query the profiling API.", Color.Black)
+            Return
+        End If
+
+        SetProfilingApiStatus("Checking", $"{firstName} {lastName}", Color.SteelBlue)
+        Dim lookupResult As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, email)
+
+        If Not lookupResult.IsConfigured Then
+            SetProfilingApiStatus("Not configured", lookupResult.DetailText, Color.DarkOrange)
+            Return
+        End If
+
+        If lookupResult.IsSuccessful Then
+            SetProfilingApiStatusDetailed(lookupResult)
+        ElseIf lookupResult.StatusText = "Student not found" Then
+            Dim profilingEmail As String = InputBox(
+                "No matching Exemplar student was found for " & firstName & " " & lastName & "." & vbCrLf & vbCrLf &
+                "Enter the student's Exemplar profiling email address to try again (or leave blank to skip):",
+                "Profiling email",
+                ""
+            )
+            If Not String.IsNullOrWhiteSpace(profilingEmail) Then
+                SetProfilingApiStatus("Checking", "Retrying with profiling email...", Color.SteelBlue)
+                lookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, profilingEmail.Trim())
+                If lookupResult.IsSuccessful Then
+                    SetProfilingApiStatusDetailed(lookupResult)
+                Else
+                    SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
+                End If
+            Else
+                SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
+            End If
+        Else
+            SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
+        End If
+    End Function
+
+    Private Async Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+        Await CheckForUpdatesAsync(showNoUpdateMessage:=True)
     End Sub
 
     Private Sub CheckVersionAndDisplayInfo()
@@ -949,7 +1117,7 @@ Public Class MainFrm
         End Using
     End Sub
 
-    Private Sub StudentCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles StudentCB.SelectedIndexChanged
+    Private Async Sub StudentCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles StudentCB.SelectedIndexChanged
         Label19.Text = ""
         Label22.Text = ""
         Label23.Text = ""
@@ -1008,6 +1176,8 @@ Public Class MainFrm
         If StudentCB.Text = "" Then
             PopulateBlockGroupCB()
         End If
+
+        Await RefreshSelectedStudentProfilingAsync()
 
         '-------------------Need to look at below----------------------------
 
