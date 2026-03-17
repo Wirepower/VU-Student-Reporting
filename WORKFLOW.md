@@ -117,12 +117,12 @@ git branch --all --list "*test/phase*"
 
 ## 7) Recommended branch testing order
 
-1. `master` (baseline)
-2. `test/phase1-ui-responsive-dpi`
-3. `test/phase2-generic-update-messaging`
-4. `test/phase3-unit-profiling-api-view`
-5. `test/phase4-preserve-sql-checkbox-behavior`
-6. `test/phase5-global-exemplar-account-transition`
-7. `test/phase6-sql-persisted-exemplar-email-override`
-8. `test/phase7-v3-hardening-wrapup`
+1. `master` (baseline already in production)
+2. `test/phase1-ui-responsive-dpi` (responsive layout and DPI behavior improvements)
+3. `test/phase2-generic-update-messaging` (cleaner user-facing update wording)
+4. `test/phase3-unit-profiling-api-view` (unit profiling API view flow)
+5. `test/phase4-preserve-sql-checkbox-behavior` (ensures profiling view does not alter SQL-driven unit checkboxes)
+6. `test/phase5-global-exemplar-account-transition` (admin API settings/token flow for moving from personal to global Exemplar account)
+7. `test/phase6-sql-persisted-exemplar-email-override` (store alternate Exemplar email by student in SQL to avoid repeat prompts)
+8. `test/phase7-v3-hardening-wrapup` (stability hardening and final polish items)
 
