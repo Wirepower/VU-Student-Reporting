@@ -94,7 +94,7 @@ Module ExemplarProfilingApi
     ''' <summary>Removes newlines and trims so the token is safe for HTTP Authorization header.</summary>
     Private Function SanitizeTokenForHeader(value As String) As String
         If String.IsNullOrWhiteSpace(value) Then Return ""
-        Dim firstLine As String = value.Split(New Char() { vbCr, vbLf })(0)
+        Dim firstLine As String = value.Split(New Char() {vbCr, vbLf})(0)
         Return firstLine.Trim().Replace(Chr(13), "").Replace(Chr(10), "")
     End Function
 

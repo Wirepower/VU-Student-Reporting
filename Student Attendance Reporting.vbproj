@@ -3,6 +3,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <RootNamespace>Student_Attendance_Reporting</RootNamespace>
     <StartupObject>Student_Attendance_Reporting.My.MyApplication</StartupObject>
     <UseWindowsForms>true</UseWindowsForms>

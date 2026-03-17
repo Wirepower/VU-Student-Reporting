@@ -333,25 +333,80 @@ Public Class MainFrm
         End If
     End Function
 
+    ''' <summary>DPI-aware responsive layout: anchors so the form adapts to all screen resolutions and scales correctly on high-DPI.</summary>
     Private Sub ConfigureResponsiveLayout()
-        ' Keep the familiar layout, but improve resizing behavior.
         Me.MinimumSize = New Size(1280, 900)
+        ' Ensure form can be resized by user; AutoScroll allows scrolling when content is taller than window
+        Me.MaximumSize = New Size(0, 0)
 
+        ' ---- Header: title and version centered when form widens ----
+        Label1.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        Label1.TextAlign = ContentAlignment.TopCenter
+        VersionLBL.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        VersionLBL.TextAlign = ContentAlignment.TopCenter
+
+        ' ---- Top-right action buttons (stay at right edge) ----
         Button1.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         Button2.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         Button9.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         MassEmailBtn.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Button3.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Button10.Anchor = AnchorStyles.Top Or AnchorStyles.Right
 
+        ' ---- Top-left: logo and DB date ----
+        Label36.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        Label37.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+
+        ' ---- Block/class row: stretch across ----
+        Label2.Anchor = AnchorStyles.Top Or AnchorStyles.Left
         BlockGroupCB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        Label27.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+
+        ' ---- Search row: label left, textbox and button stay at right ----
+        Label26.Anchor = AnchorStyles.Top Or AnchorStyles.Left
         StudentIDTextBox.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         Button6.Anchor = AnchorStyles.Top Or AnchorStyles.Right
 
+        ' ---- Student selection and selected student area ----
+        Label4.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         StudentCB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         GroupBox1.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
         SelectedStudentLBL.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
 
+        ' ---- Email/subject and teacher row: stretch ----
+        ComboBox12.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        teacherNameComboBox.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        DateTimePicker.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+
+        ' ---- Alerts and messages: full width ----
+        UnitAlertLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        InvestigationLBL.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        resitLabel.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+
+        ' ---- Notes area ----
+        Label32.Anchor = AnchorStyles.Top Or AnchorStyles.Left
         NotesTB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
-        Label14.Anchor = AnchorStyles.Bottom Or AnchorStyles.Left Or AnchorStyles.Right
+
+        ' ---- Full-width action buttons (Submit / Student Investigation) ----
+        Button7.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        Button8.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+
+        ' ---- Separator and status ----
+        Label14.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        StatusLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        btnReconnect.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+
+        ' ---- Profiling API section (left column, labels can wrap) ----
+        Label38.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        Label39.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
+        ProfilingMissingLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingMissingValLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingNotVerifiedLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingNotVerifiedValLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingEmployerVerifiedLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingEmployerVerifiedValLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingLastCardLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        ProfilingLastCardValLbl.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
     End Sub
 
     Private Sub SetProfilingApiStatus(statusText As String, detailText As String, Optional statusColor As Color? = Nothing)
