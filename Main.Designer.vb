@@ -1096,7 +1096,7 @@ Partial Class MainFrm
         AutoScaleDimensions = New SizeF(96F, 96F)
         AutoScaleMode = AutoScaleMode.Dpi
         AutoScroll = True
-        AutoSize = True
+        AutoSize = False
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
         Controls.Add(ProfilingLastCardValLbl)

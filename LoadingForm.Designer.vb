@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class LoadingForm
     Inherits System.Windows.Forms.Form
 
@@ -46,8 +46,8 @@ Partial Class LoadingForm
         ' 
         ' LoadingForm
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
         ClientSize = New Size(634, 236)
         Controls.Add(ProgressBar1)
         Controls.Add(Label1)
@@ -60,3 +60,5 @@ Partial Class LoadingForm
     Friend WithEvents Label1 As Label
     Friend WithEvents ProgressBar1 As ProgressBar
 End Class
+
+

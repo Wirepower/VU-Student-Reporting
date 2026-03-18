@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class StudentInvestigation
     Inherits System.Windows.Forms.Form
 
@@ -47,8 +47,8 @@ Partial Class StudentInvestigation
         ' 
         ' StudentInvestigation
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
         ClientSize = New Size(800, 605)
         Controls.Add(Button1)
         Controls.Add(Label1)
@@ -61,3 +61,5 @@ Partial Class StudentInvestigation
     Friend WithEvents Label1 As Label
     Friend WithEvents Button1 As Button
 End Class
+
+

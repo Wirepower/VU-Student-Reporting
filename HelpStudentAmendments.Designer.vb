@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class HelpStudentAmendments
     Inherits System.Windows.Forms.Form
 
@@ -67,8 +67,9 @@ Partial Class HelpStudentAmendments
         ' 
         ' HelpStudentAmendments
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(800, 450)
         Controls.Add(Button1)
         Controls.Add(Label2)
@@ -85,3 +86,5 @@ Partial Class HelpStudentAmendments
     Friend WithEvents Label1 As Label
     Friend WithEvents ComboBox1 As ComboBox
 End Class
+
+

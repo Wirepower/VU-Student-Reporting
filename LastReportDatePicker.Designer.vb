@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class LastReportDatePicker
     Inherits System.Windows.Forms.Form
 
@@ -74,8 +74,9 @@ Partial Class LastReportDatePicker
         ' 
         ' LastReportDatePicker
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(800, 450)
         Controls.Add(Label2)
         Controls.Add(Label1)
@@ -94,3 +95,5 @@ Partial Class LastReportDatePicker
     Friend WithEvents Label1 As Label
     Friend WithEvents Label2 As Label
 End Class
+
+

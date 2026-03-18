@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class SQLError
     Inherits System.Windows.Forms.Form
 
@@ -66,8 +66,9 @@ Partial Class SQLError
         ' 
         ' SQLError
         ' 
-        AutoScaleDimensions = New SizeF(7.0F, 15.0F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(1295, 263)
         Controls.Add(Label1)
         Controls.Add(Button10)
@@ -84,3 +85,5 @@ Partial Class SQLError
     Friend WithEvents TextBox5 As TextBox
     Friend WithEvents Label1 As Label
 End Class
+
+

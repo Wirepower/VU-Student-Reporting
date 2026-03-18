@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class BugReport
     Inherits System.Windows.Forms.Form
 
@@ -134,8 +134,9 @@ Partial Class BugReport
         ' 
         ' BugReport
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(800, 747)
         Controls.Add(ReportByTB)
         Controls.Add(Label5)
@@ -166,3 +167,5 @@ Partial Class BugReport
     Friend WithEvents Label5 As Label
     Friend WithEvents ReportByTB As ComboBox
 End Class
+
+

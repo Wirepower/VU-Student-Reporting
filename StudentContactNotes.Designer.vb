@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class StudentContactNotes
     Inherits System.Windows.Forms.Form
 
@@ -66,8 +66,9 @@ Partial Class StudentContactNotes
         ' 
         ' StudentContactNotes
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(800, 450)
         Controls.Add(TextBox1)
         Controls.Add(Label1)
@@ -83,3 +84,5 @@ Partial Class StudentContactNotes
     Friend WithEvents TextBox1 As TextBox
     Friend WithEvents Button1 As Button
 End Class
+
+

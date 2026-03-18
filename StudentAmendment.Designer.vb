@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class StudentAmendment
     Inherits System.Windows.Forms.Form
 
@@ -500,8 +500,10 @@ Partial Class StudentAmendment
         ' 
         ' StudentAmendment
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
+        AutoSize = False
         ClientSize = New Size(1014, 776)
         Controls.Add(Label29)
         Controls.Add(Label28)
@@ -546,6 +548,8 @@ Partial Class StudentAmendment
         Controls.Add(Label1)
         Name = "StudentAmendment"
         Text = "Proposed Class Teacher:"
+        MinimumSize = New Size(1014, 776)
+        StartPosition = FormStartPosition.CenterParent
         ResumeLayout(False)
         PerformLayout()
     End Sub
@@ -592,3 +596,4 @@ Partial Class StudentAmendment
     Friend WithEvents Label28 As Label
     Friend WithEvents Label29 As Label
 End Class
+

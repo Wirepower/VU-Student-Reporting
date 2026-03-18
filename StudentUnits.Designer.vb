@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()>
 Partial Class StudentUnits
     Inherits System.Windows.Forms.Form
 
@@ -552,7 +552,7 @@ Partial Class StudentUnits
         AutoScaleDimensions = New SizeF(96F, 96F)
         AutoScaleMode = AutoScaleMode.Dpi
         AutoScroll = True
-        AutoSize = True
+        AutoSize = False
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1374, 1006)
         Controls.Add(DateLBL)
@@ -603,6 +603,7 @@ Partial Class StudentUnits
         Controls.Add(Label1)
         Name = "StudentUnits"
         Text = "Form2"
+        StartPosition = FormStartPosition.CenterParent
         GroupBox1.ResumeLayout(False)
         CType(PictureBox1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)

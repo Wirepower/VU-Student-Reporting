@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class Admin
     Inherits System.Windows.Forms.Form
 
@@ -141,8 +141,9 @@ Partial Class Admin
         ' 
         ' Admin
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(964, 698)
         Controls.Add(Label5)
         Controls.Add(Label3)
@@ -176,3 +177,5 @@ Partial Class Admin
     Friend WithEvents Label3 As Label
     Friend WithEvents Label5 As Label
 End Class
+
+

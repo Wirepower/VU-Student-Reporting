@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class EmailSubjectHelp
     Inherits System.Windows.Forms.Form
 
@@ -67,8 +67,9 @@ Partial Class EmailSubjectHelp
         ' 
         ' EmailSubjectHelp
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(800, 462)
         Controls.Add(Button2)
         Controls.Add(Label2)
@@ -85,3 +86,5 @@ Partial Class EmailSubjectHelp
     Friend WithEvents Label2 As Label
     Friend WithEvents Button2 As Button
 End Class
+
+

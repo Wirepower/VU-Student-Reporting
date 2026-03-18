@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class SettingsForm
     Inherits System.Windows.Forms.Form
 
@@ -464,8 +464,9 @@ Partial Class SettingsForm
         ' 
         ' SettingsForm
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(1338, 760)
         Controls.Add(Button13)
         Controls.Add(Label16)
@@ -565,3 +566,5 @@ Partial Class SettingsForm
     Friend WithEvents Label16 As Label
     Friend WithEvents Button13 As Button
 End Class
+
+

@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class EmailTemplates
     Inherits System.Windows.Forms.Form
 
@@ -145,8 +145,9 @@ Partial Class EmailTemplates
         ' 
         ' EmailTemplates
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(983, 959)
         Controls.Add(Label4)
         Controls.Add(Label3)
@@ -179,3 +180,5 @@ Partial Class EmailTemplates
     Friend WithEvents Label3 As Label
     Friend WithEvents Label4 As Label
 End Class
+
+

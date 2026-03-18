@@ -1,4 +1,4 @@
-﻿<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
+<Global.Microsoft.VisualBasic.CompilerServices.DesignerGenerated()> _
 Partial Class Settings
     Inherits System.Windows.Forms.Form
 
@@ -355,8 +355,9 @@ Partial Class Settings
         ' 
         ' Settings
         ' 
-        AutoScaleDimensions = New SizeF(7F, 15F)
-        AutoScaleMode = AutoScaleMode.Font
+        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleMode = AutoScaleMode.Dpi
+        AutoScroll = True
         ClientSize = New Size(1338, 701)
         Controls.Add(MassEmailChkBx)
         Controls.Add(Button8)
@@ -434,3 +435,5 @@ Partial Class Settings
     Friend WithEvents Button8 As Button
     Friend WithEvents MassEmailChkBx As CheckBox
 End Class
+
+
