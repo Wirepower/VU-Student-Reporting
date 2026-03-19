@@ -651,7 +651,7 @@ Partial Class StudentUnits
         UEECO0023DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECO0023DEMO.Location = New Point(96, 362)
         UEECO0023DEMO.Name = "UEECO0023DEMO"
-        UEECO0023DEMO.Size = New Size(70, 19)
+        UEECO0023DEMO.Size = New Size(55, 19)
         UEECO0023DEMO.TabIndex = 201
         UEECO0023DEMO.Text = "N/A"
         UEECO0023DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -673,7 +673,7 @@ Partial Class StudentUnits
         UEECD0007DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECD0007DEMO.Location = New Point(96, 387)
         UEECD0007DEMO.Name = "UEECD0007DEMO"
-        UEECD0007DEMO.Size = New Size(70, 19)
+        UEECD0007DEMO.Size = New Size(55, 19)
         UEECD0007DEMO.TabIndex = 203
         UEECD0007DEMO.Text = "N/A"
         UEECD0007DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -695,7 +695,7 @@ Partial Class StudentUnits
         UEECD0019DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECD0019DEMO.Location = New Point(96, 412)
         UEECD0019DEMO.Name = "UEECD0019DEMO"
-        UEECD0019DEMO.Size = New Size(70, 19)
+        UEECD0019DEMO.Size = New Size(55, 19)
         UEECD0019DEMO.TabIndex = 205
         UEECD0019DEMO.Text = "N/A"
         UEECD0019DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -717,7 +717,7 @@ Partial Class StudentUnits
         UEECD0020DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECD0020DEMO.Location = New Point(96, 437)
         UEECD0020DEMO.Name = "UEECD0020DEMO"
-        UEECD0020DEMO.Size = New Size(70, 19)
+        UEECD0020DEMO.Size = New Size(55, 19)
         UEECD0020DEMO.TabIndex = 207
         UEECD0020DEMO.Text = "N/A"
         UEECD0020DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -739,7 +739,7 @@ Partial Class StudentUnits
         UEECD0051DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECD0051DEMO.Location = New Point(96, 462)
         UEECD0051DEMO.Name = "UEECD0051DEMO"
-        UEECD0051DEMO.Size = New Size(70, 19)
+        UEECD0051DEMO.Size = New Size(55, 19)
         UEECD0051DEMO.TabIndex = 209
         UEECD0051DEMO.Text = "N/A"
         UEECD0051DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -761,7 +761,7 @@ Partial Class StudentUnits
         UEECD0046DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECD0046DEMO.Location = New Point(96, 487)
         UEECD0046DEMO.Name = "UEECD0046DEMO"
-        UEECD0046DEMO.Size = New Size(70, 19)
+        UEECD0046DEMO.Size = New Size(55, 19)
         UEECD0046DEMO.TabIndex = 211
         UEECD0046DEMO.Text = "N/A"
         UEECD0046DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -783,7 +783,7 @@ Partial Class StudentUnits
         UEECD0044DEMO.BorderStyle = BorderStyle.FixedSingle
         UEECD0044DEMO.Location = New Point(96, 512)
         UEECD0044DEMO.Name = "UEECD0044DEMO"
-        UEECD0044DEMO.Size = New Size(70, 19)
+        UEECD0044DEMO.Size = New Size(55, 19)
         UEECD0044DEMO.TabIndex = 213
         UEECD0044DEMO.Text = "N/A"
         UEECD0044DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -805,7 +805,7 @@ Partial Class StudentUnits
         UEEEL0021DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0021DEMO.Location = New Point(96, 537)
         UEEEL0021DEMO.Name = "UEEEL0021DEMO"
-        UEEEL0021DEMO.Size = New Size(70, 19)
+        UEEEL0021DEMO.Size = New Size(55, 19)
         UEEEL0021DEMO.TabIndex = 215
         UEEEL0021DEMO.Text = "N/A"
         UEEEL0021DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -827,7 +827,7 @@ Partial Class StudentUnits
         UEEEL0019DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0019DEMO.Location = New Point(96, 562)
         UEEEL0019DEMO.Name = "UEEEL0019DEMO"
-        UEEEL0019DEMO.Size = New Size(70, 19)
+        UEEEL0019DEMO.Size = New Size(55, 19)
         UEEEL0019DEMO.TabIndex = 217
         UEEEL0019DEMO.Text = "N/A"
         UEEEL0019DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -849,7 +849,7 @@ Partial Class StudentUnits
         UEERE0001DEMO.BorderStyle = BorderStyle.FixedSingle
         UEERE0001DEMO.Location = New Point(96, 587)
         UEERE0001DEMO.Name = "UEERE0001DEMO"
-        UEERE0001DEMO.Size = New Size(70, 19)
+        UEERE0001DEMO.Size = New Size(55, 19)
         UEERE0001DEMO.TabIndex = 219
         UEERE0001DEMO.Text = "N/A"
         UEERE0001DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -871,7 +871,7 @@ Partial Class StudentUnits
         UEEEL0023DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0023DEMO.Location = New Point(96, 612)
         UEEEL0023DEMO.Name = "UEEEL0023DEMO"
-        UEEEL0023DEMO.Size = New Size(70, 19)
+        UEEEL0023DEMO.Size = New Size(55, 19)
         UEEEL0023DEMO.TabIndex = 221
         UEEEL0023DEMO.Text = "N/A"
         UEEEL0023DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -893,7 +893,7 @@ Partial Class StudentUnits
         UEEEL0020DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0020DEMO.Location = New Point(96, 637)
         UEEEL0020DEMO.Name = "UEEEL0020DEMO"
-        UEEEL0020DEMO.Size = New Size(70, 19)
+        UEEEL0020DEMO.Size = New Size(55, 19)
         UEEEL0020DEMO.TabIndex = 223
         UEEEL0020DEMO.Text = "N/A"
         UEEEL0020DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -915,7 +915,7 @@ Partial Class StudentUnits
         UEEEL0025DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0025DEMO.Location = New Point(96, 662)
         UEEEL0025DEMO.Name = "UEEEL0025DEMO"
-        UEEEL0025DEMO.Size = New Size(70, 19)
+        UEEEL0025DEMO.Size = New Size(55, 19)
         UEEEL0025DEMO.TabIndex = 225
         UEEEL0025DEMO.Text = "N/A"
         UEEEL0025DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -937,7 +937,7 @@ Partial Class StudentUnits
         UEEEL0024DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0024DEMO.Location = New Point(96, 690)
         UEEEL0024DEMO.Name = "UEEEL0024DEMO"
-        UEEEL0024DEMO.Size = New Size(70, 19)
+        UEEEL0024DEMO.Size = New Size(55, 19)
         UEEEL0024DEMO.TabIndex = 227
         UEEEL0024DEMO.Text = "N/A"
         UEEEL0024DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -959,7 +959,7 @@ Partial Class StudentUnits
         UEEEL0008DEMO.BorderStyle = BorderStyle.FixedSingle
         UEEEL0008DEMO.Location = New Point(96, 715)
         UEEEL0008DEMO.Name = "UEEEL0008DEMO"
-        UEEEL0008DEMO.Size = New Size(70, 19)
+        UEEEL0008DEMO.Size = New Size(55, 19)
         UEEEL0008DEMO.TabIndex = 229
         UEEEL0008DEMO.Text = "N/A"
         UEEEL0008DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -979,9 +979,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0009DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0009DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0009DEMO.Location = New Point(756, 362)
+        UEEEL0009DEMO.Location = New Point(759, 361)
         UEEEL0009DEMO.Name = "UEEEL0009DEMO"
-        UEEEL0009DEMO.Size = New Size(70, 19)
+        UEEEL0009DEMO.Size = New Size(55, 19)
         UEEEL0009DEMO.TabIndex = 231
         UEEEL0009DEMO.Text = "N/A"
         UEEEL0009DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1001,9 +1001,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0010DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0010DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0010DEMO.Location = New Point(756, 387)
+        UEEEL0010DEMO.Location = New Point(759, 386)
         UEEEL0010DEMO.Name = "UEEEL0010DEMO"
-        UEEEL0010DEMO.Size = New Size(70, 19)
+        UEEEL0010DEMO.Size = New Size(55, 19)
         UEEEL0010DEMO.TabIndex = 233
         UEEEL0010DEMO.Text = "N/A"
         UEEEL0010DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1023,9 +1023,9 @@ Partial Class StudentUnits
         ' 
         UEEDV0005DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEDV0005DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEDV0005DEMO.Location = New Point(756, 412)
+        UEEDV0005DEMO.Location = New Point(759, 411)
         UEEDV0005DEMO.Name = "UEEDV0005DEMO"
-        UEEDV0005DEMO.Size = New Size(70, 19)
+        UEEDV0005DEMO.Size = New Size(55, 19)
         UEEDV0005DEMO.TabIndex = 235
         UEEDV0005DEMO.Text = "N/A"
         UEEDV0005DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1045,9 +1045,9 @@ Partial Class StudentUnits
         ' 
         UEEDV0008DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEDV0008DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEDV0008DEMO.Location = New Point(756, 437)
+        UEEDV0008DEMO.Location = New Point(759, 436)
         UEEDV0008DEMO.Name = "UEEDV0008DEMO"
-        UEEDV0008DEMO.Size = New Size(70, 19)
+        UEEDV0008DEMO.Size = New Size(55, 19)
         UEEDV0008DEMO.TabIndex = 237
         UEEDV0008DEMO.Text = "N/A"
         UEEDV0008DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1067,9 +1067,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0003DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0003DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0003DEMO.Location = New Point(756, 462)
+        UEEEL0003DEMO.Location = New Point(759, 461)
         UEEEL0003DEMO.Name = "UEEEL0003DEMO"
-        UEEEL0003DEMO.Size = New Size(70, 19)
+        UEEEL0003DEMO.Size = New Size(55, 19)
         UEEEL0003DEMO.TabIndex = 239
         UEEEL0003DEMO.Text = "N/A"
         UEEEL0003DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1089,9 +1089,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0018DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0018DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0018DEMO.Location = New Point(756, 487)
+        UEEEL0018DEMO.Location = New Point(759, 486)
         UEEEL0018DEMO.Name = "UEEEL0018DEMO"
-        UEEEL0018DEMO.Size = New Size(70, 19)
+        UEEEL0018DEMO.Size = New Size(55, 19)
         UEEEL0018DEMO.TabIndex = 241
         UEEEL0018DEMO.Text = "N/A"
         UEEEL0018DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1111,9 +1111,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0005DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0005DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0005DEMO.Location = New Point(756, 512)
+        UEEEL0005DEMO.Location = New Point(759, 511)
         UEEEL0005DEMO.Name = "UEEEL0005DEMO"
-        UEEEL0005DEMO.Size = New Size(70, 19)
+        UEEEL0005DEMO.Size = New Size(55, 19)
         UEEEL0005DEMO.TabIndex = 243
         UEEEL0005DEMO.Text = "N/A"
         UEEEL0005DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1133,9 +1133,9 @@ Partial Class StudentUnits
         ' 
         UEECD0016DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEECD0016DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEECD0016DEMO.Location = New Point(756, 537)
+        UEECD0016DEMO.Location = New Point(759, 536)
         UEECD0016DEMO.Name = "UEECD0016DEMO"
-        UEECD0016DEMO.Size = New Size(70, 19)
+        UEECD0016DEMO.Size = New Size(55, 19)
         UEECD0016DEMO.TabIndex = 245
         UEECD0016DEMO.Text = "N/A"
         UEECD0016DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1155,9 +1155,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0047DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0047DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0047DEMO.Location = New Point(756, 562)
+        UEEEL0047DEMO.Location = New Point(759, 561)
         UEEEL0047DEMO.Name = "UEEEL0047DEMO"
-        UEEEL0047DEMO.Size = New Size(70, 19)
+        UEEEL0047DEMO.Size = New Size(55, 19)
         UEEEL0047DEMO.TabIndex = 247
         UEEEL0047DEMO.Text = "N/A"
         UEEEL0047DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1177,9 +1177,9 @@ Partial Class StudentUnits
         ' 
         HLTAID009DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         HLTAID009DEMO.BorderStyle = BorderStyle.FixedSingle
-        HLTAID009DEMO.Location = New Point(756, 587)
+        HLTAID009DEMO.Location = New Point(759, 586)
         HLTAID009DEMO.Name = "HLTAID009DEMO"
-        HLTAID009DEMO.Size = New Size(70, 19)
+        HLTAID009DEMO.Size = New Size(55, 19)
         HLTAID009DEMO.TabIndex = 249
         HLTAID009DEMO.Text = "N/A"
         HLTAID009DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1199,9 +1199,9 @@ Partial Class StudentUnits
         ' 
         UETDRRF004DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UETDRRF004DEMO.BorderStyle = BorderStyle.FixedSingle
-        UETDRRF004DEMO.Location = New Point(756, 612)
+        UETDRRF004DEMO.Location = New Point(759, 611)
         UETDRRF004DEMO.Name = "UETDRRF004DEMO"
-        UETDRRF004DEMO.Size = New Size(70, 19)
+        UETDRRF004DEMO.Size = New Size(55, 19)
         UETDRRF004DEMO.TabIndex = 251
         UETDRRF004DEMO.Text = "N/A"
         UETDRRF004DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1221,9 +1221,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0014DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0014DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0014DEMO.Location = New Point(756, 637)
+        UEEEL0014DEMO.Location = New Point(759, 636)
         UEEEL0014DEMO.Name = "UEEEL0014DEMO"
-        UEEEL0014DEMO.Size = New Size(70, 19)
+        UEEEL0014DEMO.Size = New Size(55, 19)
         UEEEL0014DEMO.TabIndex = 253
         UEEEL0014DEMO.Text = "N/A"
         UEEEL0014DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1243,9 +1243,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0012DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0012DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0012DEMO.Location = New Point(756, 662)
+        UEEEL0012DEMO.Location = New Point(759, 661)
         UEEEL0012DEMO.Name = "UEEEL0012DEMO"
-        UEEEL0012DEMO.Size = New Size(70, 19)
+        UEEEL0012DEMO.Size = New Size(55, 19)
         UEEEL0012DEMO.TabIndex = 255
         UEEEL0012DEMO.Text = "N/A"
         UEEEL0012DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1265,9 +1265,9 @@ Partial Class StudentUnits
         ' 
         UEEEL0039DEMO.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(204))
         UEEEL0039DEMO.BorderStyle = BorderStyle.FixedSingle
-        UEEEL0039DEMO.Location = New Point(756, 687)
+        UEEEL0039DEMO.Location = New Point(759, 686)
         UEEEL0039DEMO.Name = "UEEEL0039DEMO"
-        UEEEL0039DEMO.Size = New Size(70, 19)
+        UEEEL0039DEMO.Size = New Size(55, 19)
         UEEEL0039DEMO.TabIndex = 257
         UEEEL0039DEMO.Text = "N/A"
         UEEEL0039DEMO.TextAlign = ContentAlignment.MiddleCenter
@@ -1329,7 +1329,7 @@ Partial Class StudentUnits
         ' Label13
         ' 
         Label13.AutoSize = True
-        Label13.Location = New Point(64, 831)
+        Label13.Location = New Point(199, 889)
         Label13.Name = "Label13"
         Label13.Size = New Size(50, 15)
         Label13.TabIndex = 264
@@ -1343,6 +1343,7 @@ Partial Class StudentUnits
         Button2.TabIndex = 265
         Button2.Text = "Email Authority to sit letter"
         Button2.UseVisualStyleBackColor = True
+        Button2.Visible = False
         ' 
         ' Button3
         ' 
@@ -1352,6 +1353,7 @@ Partial Class StudentUnits
         Button3.TabIndex = 266
         Button3.Text = "Email Profiling Correspondance"
         Button3.UseVisualStyleBackColor = True
+        Button3.Visible = False
         ' 
         ' StudentUnits
         ' 
