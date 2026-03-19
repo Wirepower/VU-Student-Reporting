@@ -139,6 +139,8 @@ Partial Class StudentUnits
         Label13 = New Label()
         Button2 = New Button()
         Button3 = New Button()
+        Label14 = New Label()
+        Label15 = New Label()
         GroupBox1.SuspendLayout()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
@@ -1355,6 +1357,26 @@ Partial Class StudentUnits
         Button3.UseVisualStyleBackColor = True
         Button3.Visible = False
         ' 
+        ' Label14
+        ' 
+        Label14.AutoSize = True
+        Label14.Location = New Point(553, 907)
+        Label14.Name = "Label14"
+        Label14.Size = New Size(301, 15)
+        Label14.TabIndex = 267
+        Label14.Text = "Profiling below 85%, Student doesn't meet requrements"
+        Label14.Visible = False
+        ' 
+        ' Label15
+        ' 
+        Label15.AutoSize = True
+        Label15.Location = New Point(548, 907)
+        Label15.Name = "Label15"
+        Label15.Size = New Size(307, 15)
+        Label15.TabIndex = 268
+        Label15.Text = "Profiling below 100%, Student doesn't meet requrements"
+        Label15.Visible = False
+        ' 
         ' StudentUnits
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -1362,6 +1384,8 @@ Partial Class StudentUnits
         AutoScroll = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1415, 1006)
+        Controls.Add(Label15)
+        Controls.Add(Label14)
         Controls.Add(Button3)
         Controls.Add(Button2)
         Controls.Add(Label13)
@@ -1602,4 +1626,6 @@ Partial Class StudentUnits
     Friend WithEvents Label13 As Label
     Friend WithEvents Button2 As Button
     Friend WithEvents Button3 As Button
+    Friend WithEvents Label14 As Label
+    Friend WithEvents Label15 As Label
 End Class
