@@ -715,7 +715,6 @@ Module ExemplarProfilingApi
         Return False
     End Function
 
-<<<<<<< HEAD
     ''' <summary>Flattens a JsonElement to "path = value" lines so you can see every field name and value. Used when EXEMPLAR_DEBUG_LIST_RESPONSES=1.</summary>
     Private Sub FlattenJsonToLines(element As JsonElement, prefix As String, output As List(Of String), Optional depth As Integer = 0)
         If depth > 15 Then Return
@@ -772,7 +771,7 @@ Module ExemplarProfilingApi
                 Next
         End Select
     End Sub
-=======
+
     Private Function TryGetIntegerByPossibleKeys(element As JsonElement, keys As IEnumerable(Of String), ByRef value As Integer) As Boolean
         For Each key In keys
             Dim prop As JsonElement
@@ -794,7 +793,6 @@ Module ExemplarProfilingApi
 
         Return False
     End Function
->>>>>>> 0a22cfb (Add per-unit profiling refresh and shared API settings)
 
     Private Function TryParseInteger(value As JsonElement, ByRef result As Integer) As Boolean
         Select Case value.ValueKind
