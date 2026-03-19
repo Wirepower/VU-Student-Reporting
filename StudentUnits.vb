@@ -13,6 +13,9 @@ Imports System.Globalization
 Public Class StudentUnits
     Private connection As SqlConnection
     Friend Shared studentUnitsForm As New StudentUnits()
+    Private ReadOnly unitCheckBoxes As New Dictionary(Of String, CheckBox)(StringComparer.OrdinalIgnoreCase)
+    Private ReadOnly originalCheckBoxText As New Dictionary(Of CheckBox, String)
+    
 
 
     Private Sub CloseBTN_Click(sender As Object, e As EventArgs) Handles CloseBTN.Click
@@ -426,9 +429,10 @@ Public Class StudentUnits
             End Using
         End Using
     End Sub
-    Private Sub StudentUnits_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Async Sub StudentUnits_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         VersionLBL.Text = MainFrm.VersionLBL.Text
         SelectedStudentLBL.Text = MainFrm.SelectedStudentLBL.Text
+        InitializeUnitCheckBoxMap()
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
         UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -437,6 +441,11 @@ Public Class StudentUnits
         UpdateButtonVisibility()
         PopulateTeacherCombo()
         UpdateLabelWithDatabaseDate()
+        If ExemplarProfilingApi.IsConfigured() Then
+            SetProfilingSummary("Ready to refresh per-unit profiling percentages.", Color.DarkGreen)
+        Else
+            SetProfilingSummary("Profiling API is not configured for this installation.", Color.DarkOrange)
+        End If
         '-------------------------------------------------------------
         'Enable below once Address column is working in SQL database
         TextBox1.Text = MainFrm.Label28.Text
@@ -449,7 +458,39 @@ Public Class StudentUnits
 
         End If
 
+        ' Auto-load per-unit profiling percentages when the form opens.
+        If ExemplarProfilingApi.IsConfigured() AndAlso unitCheckBoxes.Count > 0 Then
+            Try
+                Cursor = Cursors.WaitCursor
+                Dim result As ExemplarUnitProgressResult = Await ExemplarProfilingApi.GetStudentUnitProgressAsync(
+                    MainFrm.StudentFirstnameLBL.Text,
+                    MainFrm.StudentSurnameLBL.Text,
+                    MainFrm.StudentEmailLBL.Text,
+                    "",
+                    unitCheckBoxes.Keys,
+                    New String() {
+                        "acab955d-09f4-4d04-ae6e-a6dc463a1e48",
+                        "f7e89709-7528-446b-a71f-3cecbbd911b2"
+                    }
+                )
+
+                If result IsNot Nothing AndAlso result.IsSuccessful Then
+                    ApplyUnitProfilingAnnotations(result)
+                    SetProfilingSummary("Profiling percentages loaded.", Color.DarkGreen)
+                Else
+                    SetProfilingSummary("Student qualification request failed: " &
+                                         If(result IsNot Nothing, result.ErrorMessage, "Unknown error"), Color.Maroon)
+                End If
+            Catch ex As Exception
+                SetProfilingSummary("Student qualification request failed: " & ex.Message, Color.Maroon)
+            Finally
+                Cursor = Cursors.Default
+            End Try
+        End If
+
     End Sub
+
+    
     Private Sub UpdateLabelWithDatabaseDate()
         Try
             ' Construct the SQL query to retrieve the database update date
@@ -488,6 +529,401 @@ Public Class StudentUnits
     Private Sub UnitAlertLbl1_Click(sender As Object, e As EventArgs) Handles UnitAlertLbl1.Click
 
     End Sub
+
+    Private Sub InitializeUnitCheckBoxMap()
+        If unitCheckBoxes.Count > 0 Then
+            Return
+        End If
+
+        For Each cb As CheckBox In {
+            CheckBox1, CheckBox2, CheckBox3, CheckBox4, CheckBox5, CheckBox6, CheckBox7, CheckBox8, CheckBox9, CheckBox10,
+            CheckBox11, CheckBox12, CheckBox13, CheckBox14, CheckBox15, CheckBox16, CheckBox17, CheckBox18, CheckBox19, CheckBox20,
+            CheckBox21, CheckBox22, CheckBox23, CheckBox24, CheckBox25, CheckBox26, CheckBox27, CheckBox28, CheckBox29
+        }
+            originalCheckBoxText(cb) = cb.Text
+            Dim unitCode As String = ExtractUnitCode(cb.Text)
+            If Not String.IsNullOrWhiteSpace(unitCode) AndAlso Not unitCheckBoxes.ContainsKey(unitCode) Then
+                unitCheckBoxes(unitCode) = cb
+            End If
+        Next
+    End Sub
+
+    Private Function ExtractUnitCode(text As String) As String
+        If String.IsNullOrWhiteSpace(text) Then
+            Return ""
+        End If
+
+        Dim parts() As String = text.Split("-"c)
+        If parts.Length = 0 Then
+            Return ""
+        End If
+
+        Return parts(0).Trim().ToUpperInvariant()
+    End Function
+
+    Private Function TryGetUnitLabel(unitCode As String, suffix As String) As Label
+        If String.IsNullOrWhiteSpace(unitCode) OrElse String.IsNullOrWhiteSpace(suffix) Then
+            Return Nothing
+        End If
+
+        Dim labelName As String = unitCode.Trim().ToUpperInvariant() & suffix.Trim().ToUpperInvariant()
+        Dim found As Control() = Me.Controls.Find(labelName, True)
+        If found IsNot Nothing AndAlso found.Length > 0 Then
+            Return TryCast(found(0), Label)
+        End If
+
+        Return Nothing
+    End Function
+
+    Private Iterator Function GetAllLabelsRecursively(parent As Control) As IEnumerable(Of Label)
+        For Each child As Control In parent.Controls
+            Dim lbl As Label = TryCast(child, Label)
+            If lbl IsNot Nothing Then
+                Yield lbl
+            End If
+
+            For Each nested As Label In GetAllLabelsRecursively(child)
+                Yield nested
+            Next
+        Next
+    End Function
+
+    Private Function TryParsePercent(text As String) As Nullable(Of Double)
+        If String.IsNullOrWhiteSpace(text) Then
+            Return Nothing
+        End If
+
+        Dim t As String = text.Trim()
+        If String.Equals(t, "N/A", StringComparison.OrdinalIgnoreCase) Then
+            Return Nothing
+        End If
+
+        If t.EndsWith("%"c) Then
+            t = t.Substring(0, t.Length - 1).Trim()
+        End If
+
+        Dim value As Double
+        If Double.TryParse(t, Globalization.NumberStyles.Any, Globalization.CultureInfo.InvariantCulture, value) Then
+            Return value
+        End If
+
+        Return Nothing
+    End Function
+
+    Private Sub UpdateAveragePercentageLabel()
+        ' Label13 is created in the Designer by you.
+        Dim found As Control() = Me.Controls.Find("Label13", True)
+        If found Is Nothing OrElse found.Length = 0 Then
+            Return
+        End If
+
+        Dim avgLbl As Label = TryCast(found(0), Label)
+        If avgLbl Is Nothing Then
+            Return
+        End If
+
+        Dim expSum As Double = 0
+        Dim expCount As Integer = 0
+        Dim demoSum As Double = 0
+        Dim demoCount As Integer = 0
+
+        For Each lbl As Label In GetAllLabelsRecursively(Me)
+            If lbl Is Nothing OrElse String.IsNullOrWhiteSpace(lbl.Name) Then
+                Continue For
+            End If
+
+            Dim val As Nullable(Of Double) = TryParsePercent(lbl.Text)
+            If Not val.HasValue Then
+                Continue For
+            End If
+
+            If lbl.Name.EndsWith("EXP", StringComparison.OrdinalIgnoreCase) Then
+                expSum += val.Value
+                expCount += 1
+            ElseIf lbl.Name.EndsWith("DEMO", StringComparison.OrdinalIgnoreCase) Then
+                demoSum += val.Value
+                demoCount += 1
+            End If
+        Next
+
+        If expCount = 0 AndAlso demoCount = 0 Then
+            avgLbl.Text = "N/A"
+            Return
+        End If
+
+        Dim avgExp As Double = If(expCount > 0, expSum / expCount, Double.NaN)
+        Dim avgDemo As Double = If(demoCount > 0, demoSum / demoCount, Double.NaN)
+
+        Dim combinedAvg As Double
+        If expCount > 0 AndAlso demoCount > 0 Then
+            combinedAvg = (avgExp + avgDemo) / 2.0
+        ElseIf expCount > 0 Then
+            combinedAvg = avgExp
+        Else
+            combinedAvg = avgDemo
+        End If
+
+        avgLbl.Text = $"{CInt(Math.Round(combinedAvg, 0))}%"
+    End Sub
+
+    Private Sub SetProfilingSummary(message As String, color As Color)
+        ProfilingSummaryLbl.Text = message
+        ProfilingSummaryLbl.ForeColor = color
+    End Sub
+
+    Private Sub ResetProfilingAnnotations()
+        For Each pair In originalCheckBoxText
+            pair.Key.Text = pair.Value
+        Next
+
+        ' Reset the experience/demonstration labels for all known units.
+        For Each code In unitCheckBoxes.Keys
+            Dim expLbl As Label = TryGetUnitLabel(code, "EXP")
+            If expLbl IsNot Nothing Then expLbl.Text = "N/A"
+
+            Dim demoLbl As Label = TryGetUnitLabel(code, "DEMO")
+            If demoLbl IsNot Nothing Then demoLbl.Text = "N/A"
+        Next
+
+        UpdateAveragePercentageLabel()
+    End Sub
+
+    Private Sub ApplyUnitProfilingAnnotations(progressResult As ExemplarUnitProgressResult)
+        ResetProfilingAnnotations()
+
+        ' Iterate the API's returned unit keys directly to avoid any key casing mismatch.
+        For Each pair In progressResult.Units
+            Dim code As String = pair.Key
+            Dim unitInfo As ExemplarUnitProgressItem = pair.Value
+
+            Dim percentText As String = "N/A"
+            If unitInfo.Percentage.HasValue Then
+                percentText = unitInfo.Percentage.Value.ToString("0.##") & "%"
+            End If
+
+            Dim cardsText As String = ""
+            If unitInfo.CompletedCards.HasValue AndAlso unitInfo.TotalCards.HasValue AndAlso unitInfo.TotalCards.Value > 0 Then
+                cardsText = $" ({unitInfo.CompletedCards.Value}/{unitInfo.TotalCards.Value} cards)"
+            End If
+
+            Dim expPct As String = If(unitInfo.ExperienceCardsPercentage.HasValue,
+                                      CInt(Math.Round(unitInfo.ExperienceCardsPercentage.Value, 0)).ToString() & "%",
+                                      TryComputeCardsPercent(unitInfo.ExperienceCardsRawJson))
+            Dim demoPct As String = If(unitInfo.DemonstrationCardsPercentage.HasValue,
+                                       CInt(Math.Round(unitInfo.DemonstrationCardsPercentage.Value, 0)).ToString() & "%",
+                                       TryComputeCardsPercent(unitInfo.DemonstrationCardsRawJson))
+
+            ' Update the designer labels.
+            Dim expLbl As Label = TryGetUnitLabel(code, "EXP")
+            If expLbl IsNot Nothing Then expLbl.Text = expPct
+
+            Dim demoLbl As Label = TryGetUnitLabel(code, "DEMO")
+            If demoLbl IsNot Nothing Then demoLbl.Text = demoPct
+        Next
+
+        UpdateAveragePercentageLabel()
+    End Sub
+
+    Private Sub WriteProfilingDebugDump(rawJson As String)
+        Try
+            Dim dumpPath As String = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExemplarUnitProfilingDebug.txt")
+            Dim sb As New System.Text.StringBuilder()
+            sb.AppendLine("Student Units Profiling Debug Dump")
+            sb.AppendLine("Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+            sb.AppendLine()
+            sb.AppendLine(rawJson)
+
+            File.WriteAllText(dumpPath, sb.ToString(), System.Text.Encoding.UTF8)
+            SetProfilingSummary("Profiling debug dump written to " & dumpPath, Color.DarkGreen)
+            Try
+                Process.Start(New ProcessStartInfo() With {
+                    .FileName = dumpPath,
+                    .UseShellExecute = True
+                })
+            Catch ex As Exception
+                SetProfilingSummary("Profiling debug dump written, but could not open it automatically: " & ex.Message, Color.DarkOrange)
+            End Try
+        Catch ex As Exception
+            SetProfilingSummary("Failed to write profiling debug dump: " & ex.Message, Color.Maroon)
+        End Try
+    End Sub
+
+    Private Sub WriteProfilingDebugDump(result As ExemplarUnitProgressResult)
+        Try
+            Dim dumpPath As String = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExemplarUnitProfilingDebug.txt")
+            Dim sb As New System.Text.StringBuilder()
+
+            sb.AppendLine("Student Units Profiling Debug Dump")
+            sb.AppendLine("Generated: " & DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"))
+            sb.AppendLine()
+
+            For Each pair In result.Units
+                Dim unitCode As String = pair.Key
+                Dim unitItem As ExemplarUnitProgressItem = pair.Value
+
+                sb.AppendLine("=== UNIT " & unitCode & " ===")
+
+                Dim expPct As String = If(unitItem.ExperienceCardsPercentage.HasValue,
+                                          CInt(Math.Round(unitItem.ExperienceCardsPercentage.Value, 0)).ToString() & "%",
+                                          TryComputeCardsPercent(unitItem.ExperienceCardsRawJson))
+                Dim demoPct As String = If(unitItem.DemonstrationCardsPercentage.HasValue,
+                                           CInt(Math.Round(unitItem.DemonstrationCardsPercentage.Value, 0)).ToString() & "%",
+                                           TryComputeCardsPercent(unitItem.DemonstrationCardsRawJson))
+
+                sb.AppendLine("=== EXPERIENCE_CARDS ===" & expPct)
+                If String.Equals(expPct, "N/A", StringComparison.OrdinalIgnoreCase) Then
+                    Dim hasRaw As Boolean = Not String.IsNullOrWhiteSpace(unitItem.ExperienceCardsRawJson)
+                    sb.AppendLine("  Debug(exp): " & If(hasRaw, "raw_present", "raw_empty"))
+                End If
+                sb.AppendLine("=== DEMONSTRATION_CARDS ===" & demoPct)
+                If String.Equals(demoPct, "N/A", StringComparison.OrdinalIgnoreCase) Then
+                    Dim hasRaw As Boolean = Not String.IsNullOrWhiteSpace(unitItem.DemonstrationCardsRawJson)
+                    sb.AppendLine("  Debug(demo): " & If(hasRaw, "raw_present", "raw_empty"))
+                End If
+
+                ' Debug one known unit to inspect what the /progression/cards endpoint returns.
+                If String.Equals(unitCode, "UEECD0007", StringComparison.OrdinalIgnoreCase) Then
+                    Dim cardsRaw As String = unitItem.ProgressionCardsEndpointRawJson
+                    Dim hasCardsEndpoint As Boolean = Not String.IsNullOrWhiteSpace(cardsRaw)
+                    sb.AppendLine("  Debug(cards_endpoint): " & If(hasCardsEndpoint, "raw_present", "raw_empty"))
+                    If hasCardsEndpoint Then
+                        Dim snippetLen As Integer = Math.Min(600, cardsRaw.Length)
+                        sb.AppendLine("  Debug(cards_endpoint_snippet): " & cardsRaw.Substring(0, snippetLen))
+                    End If
+                End If
+                sb.AppendLine()
+            Next
+
+            File.WriteAllText(dumpPath, sb.ToString(), System.Text.Encoding.UTF8)
+            SetProfilingSummary("Profiling debug dump written to " & dumpPath, Color.DarkGreen)
+
+            Try
+                Process.Start(New ProcessStartInfo() With {
+                    .FileName = dumpPath,
+                    .UseShellExecute = True
+                })
+            Catch ex As Exception
+                SetProfilingSummary("Profiling debug dump written, but could not open it automatically: " & ex.Message, Color.DarkOrange)
+            End Try
+        Catch ex As Exception
+            SetProfilingSummary("Failed to write profiling debug dump: " & ex.Message, Color.Maroon)
+        End Try
+    End Sub
+
+    Private Function TryComputeCardsPercent(cardsRawJson As String) As String
+        Try
+            If String.IsNullOrWhiteSpace(cardsRawJson) Then Return "N/A"
+
+            Using doc As System.Text.Json.JsonDocument = System.Text.Json.JsonDocument.Parse(cardsRawJson)
+                Dim root = doc.RootElement
+
+                Dim total As Integer = 0
+                Dim complete As Integer = 0
+                Dim statusesFound As Integer = 0
+
+                Dim cardsArrayFound As Boolean = False
+
+                If root.ValueKind = System.Text.Json.JsonValueKind.Array Then
+                    cardsArrayFound = True
+                    For Each item In root.EnumerateArray()
+                        total += 1
+                        Dim status As String = ExtractCardStatus(item)
+                        If Not String.IsNullOrWhiteSpace(status) Then statusesFound += 1
+                        If IsCardCompleteStatus(status) Then complete += 1
+                    Next
+                Else
+                    ' Some API responses wrap the array inside an object, e.g. { "cards": [ ... ] }
+                    ' Walk the tree to find the first array and compute percentages from it.
+                    cardsArrayFound = TryComputeCardsPercentFromFirstArray(root, total, complete, statusesFound, 0)
+                End If
+
+                If Not cardsArrayFound Then Return "N/A"
+
+                If total = 0 Then Return "N/A"
+
+                ' If the API only returns card_id/user_id (no status/completion field),
+                ' treat all returned cards as complete.
+                If statusesFound = 0 Then complete = total
+
+                Dim pct As Integer = CInt(Math.Round((complete / total) * 100D))
+                Return pct.ToString() & "%"
+            End Using
+        Catch
+            Return "N/A"
+        End Try
+    End Function
+
+    Private Function TryComputeCardsPercentFromFirstArray(root As System.Text.Json.JsonElement,
+                                                           ByRef total As Integer,
+                                                           ByRef complete As Integer,
+                                                           ByRef statusesFound As Integer,
+                                                           depth As Integer) As Boolean
+        If depth > 10 Then Return False
+
+        Select Case root.ValueKind
+            Case System.Text.Json.JsonValueKind.Array
+                total = 0
+                complete = 0
+                statusesFound = 0
+                For Each item In root.EnumerateArray()
+                    total += 1
+                    Dim status As String = ExtractCardStatus(item)
+                    If Not String.IsNullOrWhiteSpace(status) Then statusesFound += 1
+                    If IsCardCompleteStatus(status) Then complete += 1
+                Next
+                Return True
+            Case System.Text.Json.JsonValueKind.Object
+                For Each prop In root.EnumerateObject()
+                    If TryComputeCardsPercentFromFirstArray(prop.Value, total, complete, statusesFound, depth + 1) Then Return True
+                Next
+        End Select
+
+        Return False
+    End Function
+
+    Private Function ExtractCardStatus(card As System.Text.Json.JsonElement) As String
+        Try
+            If card.ValueKind = System.Text.Json.JsonValueKind.String Then
+                Return card.GetString()
+            End If
+
+            If card.ValueKind <> System.Text.Json.JsonValueKind.Object Then
+                Return ""
+            End If
+
+            ' Common status field names.
+            For Each key In New String() {"status", "card_status", "state", "completion_status", "completionStatus", "cardStatus"}
+                Dim v As System.Text.Json.JsonElement
+                If card.TryGetProperty(key, v) Then
+                    If v.ValueKind = System.Text.Json.JsonValueKind.String Then
+                        Return v.GetString()
+                    End If
+                End If
+            Next
+
+            ' Fallback for boolean approval/completion flags.
+            For Each boolKey In New String() {"approved", "is_approved", "complete", "is_complete", "completed", "is_completed"}
+                Dim v As System.Text.Json.JsonElement
+                If card.TryGetProperty(boolKey, v) Then
+                    If v.ValueKind = System.Text.Json.JsonValueKind.True Then
+                        Return boolKey
+                    End If
+                End If
+            Next
+
+            Return ""
+        Catch
+            Return ""
+        End Try
+    End Function
+
+    Private Function IsCardCompleteStatus(status As String) As Boolean
+        If String.IsNullOrWhiteSpace(status) Then Return False
+        Dim s As String = status.Trim().ToUpperInvariant()
+        Return s.Contains("APPROVED") OrElse s.Contains("COMPLETE") OrElse s.Contains("COMPLETED") OrElse
+               s.Contains("SUBMITTED") OrElse s.Contains("VERIFIED") OrElse s.Contains("SATISFIED") OrElse
+               s.Contains("PASSED")
+    End Function
 
     Private Sub UpdateButtonVisibility()
         ' Check if all checkboxes are checked
@@ -701,5 +1137,47 @@ Public Class StudentUnits
 
     Private Sub ComboBox1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox1.SelectedIndexChanged
 
+    End Sub
+
+    Private Async Sub RefreshProfilingBtn_Click(sender As Object, e As EventArgs) Handles RefreshProfilingBtn.Click
+        InitializeUnitCheckBoxMap()
+
+        If unitCheckBoxes.Count = 0 Then
+            SetProfilingSummary("No unit checkboxes were found to update.", Color.Maroon)
+            Return
+        End If
+
+        RefreshProfilingBtn.Enabled = False
+        Cursor = Cursors.WaitCursor
+        SetProfilingSummary("Loading student qualification data...", Color.SteelBlue)
+
+        Try
+            Dim result As ExemplarUnitProgressResult = Await ExemplarProfilingApi.GetStudentUnitProgressAsync(
+                MainFrm.StudentFirstnameLBL.Text,
+                MainFrm.StudentSurnameLBL.Text,
+                MainFrm.StudentEmailLBL.Text,
+                "",
+                unitCheckBoxes.Keys,
+                New String() {
+                    "acab955d-09f4-4d04-ae6e-a6dc463a1e48",
+                    "f7e89709-7528-446b-a71f-3cecbbd911b2"
+                }
+            )
+
+            If result.IsSuccessful Then
+                ApplyUnitProfilingAnnotations(result)
+                WriteProfilingDebugDump(result)
+                SetProfilingSummary("Student qualification data written to debug file.", Color.DarkGreen)
+            Else
+                WriteProfilingDebugDump("Student qualification request failed: " & result.ErrorMessage)
+                SetProfilingSummary("Student qualification request failed: " & result.ErrorMessage, Color.Maroon)
+            End If
+        Catch ex As Exception
+            WriteProfilingDebugDump("Student qualification request failed: " & ex.Message)
+            SetProfilingSummary("Student qualification request failed: " & ex.Message, Color.Maroon)
+        Finally
+            Cursor = Cursors.Default
+            RefreshProfilingBtn.Enabled = True
+        End Try
     End Sub
 End Class

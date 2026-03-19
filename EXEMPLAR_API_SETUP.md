@@ -38,10 +38,22 @@ That is the only place you need to set credentials. The app uses these to get a 
 - **Option A – Bundle a JRE (no user install):** Place a portable Java runtime in the same folder as your .exe so the app uses it and does not require Java on the system.  
   - Download a **portable JRE** (e.g. [Eclipse Temurin](https://adoptium.net/temurin/releases/) or [Microsoft OpenJDK](https://learn.microsoft.com/en-us/java/openjdk/download) – choose **Windows x64** and **JRE** or **JDK**).  
   - Unzip it and put the folder next to your app .exe. Rename the folder to **jre** (or **runtime**). The app looks for `jre\bin\java.exe` or `runtime\bin\java.exe`.  
-  - Example layout: `Student Attendance Reporting.exe`, `jre\bin\java.exe`, …  
+  - Example layout: `Student Attendance Reporting.exe`, `jre\bin\java.exe`, …
 - **Option B – System Java:** If you do not bundle a JRE, Java must be installed on the machine and on the system PATH. The app will use `java` from PATH.
 
 If credentials are not set, the app keeps normal SQL workflow and shows API as "Not configured".
+
+## Configuration (easiest deployment)
+
+The app reads profiling settings from `My.Settings` first (built into install), then environment variables as fallback.
+
+Settings used:
+
+- `ExemplarApiToken`
+- `ExemplarApiBaseUrl` (default: `https://api.profiling.exemplarsystems.com.au`)
+- `ExemplarQualificationId`
+
+For easiest rollout to non-technical users, set these values in your release build so users only install and run.
 
 ## Current API usage in app
 
@@ -57,6 +69,13 @@ From the **cards/summary** response we currently use only: total cards, complete
 **Raw JSON only:** set **EXEMPLAR_DEBUG_SAVE_JSON=1** to write the raw cards/summary JSON to **ExemplarCardsSummary_sample.json**.
 
 The result is shown on the main form as a profiling API status line.
+
+On the **Student Units** form, the **Refresh Profiling %** button calls:
+
+1. `GET /api/v1/users/:id/qualifications/:qualificationId`
+2. `GET /api/v1/users/:id/qualifications/:qualificationId/units/:unitCode/progression/cards`
+
+It appends per-unit profiling percentages/cards to each unit checkbox text without changing SQL checkbox state.
 
 ## Completion endpoint support (ready for wiring)
 

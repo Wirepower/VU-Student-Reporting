@@ -1,4 +1,4 @@
-﻿<?xml version='1.0' encoding='utf-8'?>
+<?xml version='1.0' encoding='utf-8'?>
 <SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="My" GeneratedClassName="MySettings" UseMySettingsClassName="true">
   <Profiles />
   <Settings>
@@ -7,6 +7,15 @@
     </Setting>
     <Setting Name="SQLConString" Type="System.String" Scope="User">
       <Value Profile="(Default)">Server=DEVSQLCENTRAL.AD.VU.EDU.AU, 1433;Integrated Security=True;Connect Timeout=30;Encrypt=True;Trust Server Certificate=True;Application Intent=ReadWrite;Multi Subnet Failover=False;</Value>
+    </Setting>
+    <Setting Name="ExemplarApiToken" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="ExemplarApiBaseUrl" Type="System.String" Scope="User">
+      <Value Profile="(Default)">https://api.profiling.exemplarsystems.com.au</Value>
+    </Setting>
+    <Setting Name="ExemplarQualificationId" Type="System.String" Scope="User">
+      <Value Profile="(Default)" />
     </Setting>
   </Settings>
 </SettingsFile>

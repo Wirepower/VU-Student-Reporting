@@ -1,6 +1,7 @@
 Imports System.Diagnostics
 Imports System.Globalization
 Imports System.IO
+Imports System.Linq
 Imports System.Net
 Imports System.Net.Http
 Imports System.Net.Http.Headers
@@ -26,12 +27,62 @@ Public Class ExemplarProfileLookupResult
     Public Property SubmittedEmployerVerified As Integer?
     ''' <summary>For colored UI: Last card date as dd/MM/yyyy or empty.</summary>
     Public Property LastCardFormatted As String
+    Public Property RawCardsSummaryJson As String
 End Class
 
 Public Class ExemplarQualificationUpdateResult
     Public Property IsSuccessful As Boolean
     Public Property ErrorMessage As String
     Public Property ResponseBody As String
+End Class
+
+Public Class ExemplarUnitProgressItem
+    Public Property UnitCode As String
+    Public Property Percentage As Decimal?
+    Public Property Status As String
+    Public Property TotalCards As Integer?
+    Public Property CompletedCards As Integer?
+    ' Raw JSON for the per-unit experience cards list from:
+    ' /api/v1/users/:id/qualifications/:qualificationId/units/:unitCode/progression/cards
+    Public Property ExperienceCardsRawJson As String
+    ' Raw JSON for the per-unit demonstration cards list from the same endpoint.
+    Public Property DemonstrationCardsRawJson As String
+    ' Raw JSON payload from /progression/cards for this unit (debugging / inspection).
+    Public Property ProgressionCardsEndpointRawJson As String
+
+    ' Percentages as calculated by the qualification payload:
+    ' calculation.demonstration_progression.unit_demonstration_statuses[*].percentage
+    ' and (if present) calculation.experience_progression.unit_experience_statuses[*].percentage
+    Public Property ExperienceCardsPercentage As Decimal?
+    Public Property DemonstrationCardsPercentage As Decimal?
+End Class
+
+Public Class ExemplarUnitProgressResult
+    Public Property IsSuccessful As Boolean
+    Public Property IsConfigured As Boolean
+    Public Property UserId As String
+    Public Property QualificationId As String
+    Public Property Units As New Dictionary(Of String, ExemplarUnitProgressItem)(StringComparer.OrdinalIgnoreCase)
+    Public Property ErrorMessage As String
+    Public Property RawApiJson As String
+    Public Property RawQualificationsCatalogJson As String
+    Public Property RawQualificationsJson As String
+End Class
+
+Public Class ExemplarQualificationsCatalogResult
+    Public Property IsSuccessful As Boolean
+    Public Property IsConfigured As Boolean
+    Public Property ErrorMessage As String
+    Public Property RawJson As String
+End Class
+
+Friend Class CardCountsResult
+    Public Property Success As Boolean
+    Public Property TotalCards As Integer
+    Public Property CompletedCards As Integer
+    Public Property ExperienceCardsRawJson As String
+    Public Property DemonstrationCardsRawJson As String
+    Public Property ProgressionCardsEndpointRawJson As String
 End Class
 
 Module ExemplarProfilingApi
@@ -44,13 +95,18 @@ Module ExemplarProfilingApi
     Private ReadOnly TokenRefreshLock As New Object()
     ''' <summary>Set when token refresh fails so the error message can be shown to the user.</summary>
     Private LastTokenRefreshError As String
+    ''' <summary>Last token refresh debug info (non-secret).</summary>
+    Private LastTokenRefreshBaseUrl As String
+    Private LastTokenRefreshJarPath As String
+    Private LastTokenRefreshUsernameUsed As String
     ''' <summary>When EXEMPLAR_DEBUG_LIST_RESPONSES=1, responses are collected here and written to ExemplarApiResponseFields.txt.</summary>
     Private DebugResponseList As New List(Of Tuple(Of String, String))
 
     ' Hardcoded Exemplar login: the app uses these to get a Bearer token (via the embedded or external JAR).
     ' Optionally, env vars EXEMPLAR_API_USERNAME / EXEMPLAR_API_PASSWORD override these if set (e.g. by IT).
-    Private Const ExemplarApiUsername As String = "frank.offer@vu.edu.au"
-    Private Const ExemplarApiPassword As String = "Wpower84!"
+    Private Const ExemplarApiUsername As String = "electrotechnology.admin@vu.edu.au"
+    Private Const ExemplarApiPassword As String = "VUapi12345!"
+
 
     Private Class ExemplarUserCandidate
         Public Property Id As String
@@ -75,6 +131,61 @@ Module ExemplarProfilingApi
             Return LastTokenRefreshError
         End If
         Return "Set EXEMPLAR_API_TOKEN, or ensure ExemplarLogin.jar is in the app folder and Java is installed (or add a jre folder next to the app)."
+    End Function
+
+    Public Function GetConfiguredQualificationId() As String
+        If Not String.IsNullOrWhiteSpace(My.Settings.ExemplarQualificationId) Then
+            Return My.Settings.ExemplarQualificationId.Trim()
+        End If
+
+        Dim envQualification As String = Environment.GetEnvironmentVariable("EXEMPLAR_QUALIFICATION_ID")
+        If String.IsNullOrWhiteSpace(envQualification) Then
+            Return ""
+        End If
+
+        Return envQualification.Trim()
+    End Function
+
+    Public Async Function GetQualificationsCatalogAsync() As Task(Of ExemplarQualificationsCatalogResult)
+        Dim token As String = GetBearerToken()
+        If String.IsNullOrWhiteSpace(token) Then
+            Return New ExemplarQualificationsCatalogResult With {
+                .IsSuccessful = False,
+                .IsConfigured = False,
+                .ErrorMessage = "Profiling API credentials are not configured."
+            }
+        End If
+
+        Try
+            Dim url As String = $"{GetBaseUrl()}/api/v1/qualifications"
+            Using doc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, url, token, Nothing)
+                Return New ExemplarQualificationsCatalogResult With {
+                    .IsSuccessful = True,
+                    .IsConfigured = True,
+                    .RawJson = doc.RootElement.GetRawText()
+                }
+            End Using
+        Catch ex As Exception
+            Return New ExemplarQualificationsCatalogResult With {
+                .IsSuccessful = False,
+                .IsConfigured = True,
+                .ErrorMessage = ex.Message
+            }
+        End Try
+    End Function
+
+    Public Function GetQualificationIdSourceDescription() As String
+        Dim settingValue As String = If(My.Settings.ExemplarQualificationId, "").Trim()
+        If Not String.IsNullOrWhiteSpace(settingValue) Then
+            Return "My.Settings.ExemplarQualificationId = " & settingValue
+        End If
+
+        Dim envQualification As String = If(Environment.GetEnvironmentVariable("EXEMPLAR_QUALIFICATION_ID"), "").Trim()
+        If Not String.IsNullOrWhiteSpace(envQualification) Then
+            Return "EXEMPLAR_QUALIFICATION_ID = " & envQualification
+        End If
+
+        Return "No qualification ID found in My.Settings.ExemplarQualificationId or EXEMPLAR_QUALIFICATION_ID."
     End Function
 
     Public Sub SetBearerToken(token As String)
@@ -105,7 +216,7 @@ Module ExemplarProfilingApi
                 .IsSuccessful = False,
                 .IsConfigured = False,
                 .StatusText = "Not configured",
-                .DetailText = "Set environment variable EXEMPLAR_API_TOKEN to enable profiling lookups."
+                .DetailText = "Profiling API credentials are not configured."
             }
         End If
 
@@ -125,11 +236,12 @@ Module ExemplarProfilingApi
 
             Dim cardsUrl As String = $"{GetBaseUrl()}/api/v1/users/{Uri.EscapeDataString(student.Id)}/cards/summary"
             Using cardsDoc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, cardsUrl, token, Nothing)
+                Dim rawCardsJson As String = cardsDoc.RootElement.GetRawText()
                 ' Optional: set EXEMPLAR_DEBUG_SAVE_JSON=1 to write the raw cards/summary response to a file so you can see what the API returns and choose which fields to display.
                 If String.Equals(Environment.GetEnvironmentVariable("EXEMPLAR_DEBUG_SAVE_JSON"), "1", StringComparison.OrdinalIgnoreCase) Then
                     Try
                         Dim debugPath As String = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExemplarCardsSummary_sample.json")
-                        File.WriteAllText(debugPath, cardsDoc.RootElement.GetRawText(), Encoding.UTF8)
+                        File.WriteAllText(debugPath, rawCardsJson, Encoding.UTF8)
                     Catch
                         ' Ignore
                     End Try
@@ -202,7 +314,8 @@ Module ExemplarProfilingApi
                     .MissingWeeks = missingWeeks,
                     .SubmittedNotVerified = submittedNotVerified,
                     .SubmittedEmployerVerified = submittedEmployerVerified,
-                    .LastCardFormatted = lastCardFormatted
+                    .LastCardFormatted = lastCardFormatted,
+                    .RawCardsSummaryJson = rawCardsJson
                 }
             End Using
         Catch ex As Exception
@@ -223,12 +336,147 @@ Module ExemplarProfilingApi
         End Try
     End Function
 
+    Public Async Function GetStudentUnitProgressAsync(firstName As String, lastName As String, email As String, qualificationId As String, unitCodes As IEnumerable(Of String), Optional fallbackQualificationIds As IEnumerable(Of String) = Nothing) As Task(Of ExemplarUnitProgressResult)
+        Dim token As String = GetBearerToken()
+        If String.IsNullOrWhiteSpace(token) Then
+            Return New ExemplarUnitProgressResult With {
+                .IsSuccessful = False,
+                .IsConfigured = False,
+                .ErrorMessage = "Profiling API credentials are not configured."
+            }
+        End If
+
+        Dim candidateIds As New List(Of String)()
+        If Not String.IsNullOrWhiteSpace(qualificationId) Then candidateIds.Add(qualificationId.Trim())
+        Dim configuredQualificationId As String = GetConfiguredQualificationId()
+        If Not String.IsNullOrWhiteSpace(configuredQualificationId) Then candidateIds.Add(configuredQualificationId)
+        If fallbackQualificationIds IsNot Nothing Then
+            For Each candidate As String In fallbackQualificationIds
+                If Not String.IsNullOrWhiteSpace(candidate) Then candidateIds.Add(candidate.Trim())
+            Next
+        End If
+        candidateIds = candidateIds.Distinct(StringComparer.OrdinalIgnoreCase).ToList()
+        If candidateIds.Count = 0 Then
+            Return New ExemplarUnitProgressResult With {
+                .IsSuccessful = False,
+                .IsConfigured = True,
+                .ErrorMessage = "Qualification ID is not configured."
+            }
+        End If
+
+        Try
+            Dim student As ExemplarUserCandidate = Await FindStudentAsync(token, firstName, lastName, email)
+            If student Is Nothing Then
+                Return New ExemplarUnitProgressResult With {
+                    .IsSuccessful = False,
+                    .IsConfigured = True,
+                    .ErrorMessage = "No matching Exemplar student was found."
+                }
+            End If
+
+            Dim requestedCodes As New HashSet(Of String)(
+                unitCodes.Where(Function(c) Not String.IsNullOrWhiteSpace(c)).
+                Select(Function(c) c.Trim().ToUpperInvariant()),
+                StringComparer.OrdinalIgnoreCase
+            )
+
+            Dim result As New ExemplarUnitProgressResult With {
+                .IsSuccessful = True,
+                .IsConfigured = True,
+                .UserId = student.Id,
+                .QualificationId = candidateIds(0)
+            }
+
+            Dim qualificationsCatalogUrl As String = $"{GetBaseUrl()}/api/v1/qualifications"
+            Try
+                Using qualificationsCatalogDoc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, qualificationsCatalogUrl, token, Nothing)
+                    result.RawQualificationsCatalogJson = qualificationsCatalogDoc.RootElement.GetRawText()
+                End Using
+            Catch
+                ' Keep going if the catalog endpoint is restricted in this tenant.
+            End Try
+
+            Dim qualificationsUrl As String = $"{GetBaseUrl()}/api/v1/users/{Uri.EscapeDataString(student.Id)}/qualifications"
+            Try
+                Using qualificationsDoc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, qualificationsUrl, token, Nothing)
+                    result.RawQualificationsJson = qualificationsDoc.RootElement.GetRawText()
+                End Using
+            Catch
+                ' Some tenants may not expose the list endpoint; keep going with the detail endpoint.
+            End Try
+
+            Dim lastError As String = ""
+            Dim matched As Boolean = False
+            For Each candidateQualificationId As String In candidateIds
+                Dim qualificationUrl As String = $"{GetBaseUrl()}/api/v1/users/{Uri.EscapeDataString(student.Id)}/qualifications/{Uri.EscapeDataString(candidateQualificationId)}"
+                Try
+                    Using qualificationDoc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, qualificationUrl, token, Nothing)
+                        result.RawApiJson = qualificationDoc.RootElement.GetRawText()
+                        result.QualificationId = candidateQualificationId
+                        CollectUnitProgress(qualificationDoc.RootElement, result.Units, requestedCodes, 0)
+                        CollectExperienceAndDemonstrationPercentages(qualificationDoc.RootElement, result.Units, requestedCodes)
+                        matched = True
+                    End Using
+                    Exit For
+                Catch ex As Exception
+                    lastError = ex.Message
+                End Try
+            Next
+
+            If Not matched Then
+                Return New ExemplarUnitProgressResult With {
+                    .IsSuccessful = False,
+                    .IsConfigured = True,
+                    .ErrorMessage = If(String.IsNullOrWhiteSpace(lastError), "Unable to retrieve qualification details.", lastError)
+                }
+            End If
+
+            For Each requestedCode In requestedCodes
+                If Not result.Units.ContainsKey(requestedCode) Then
+                    result.Units(requestedCode) = New ExemplarUnitProgressItem With {
+                        .UnitCode = requestedCode
+                    }
+                End If
+            Next
+
+            For Each code In requestedCodes
+                Dim unitItem As ExemplarUnitProgressItem = result.Units(code)
+                Dim countsResult As CardCountsResult = Await TryGetContributingCardCountsAsync(token, student.Id, result.QualificationId, code)
+                If countsResult IsNot Nothing Then
+                    ' Always store the raw endpoint/cards lists for debugging and card-type percentages.
+                    unitItem.ExperienceCardsRawJson = countsResult.ExperienceCardsRawJson
+                    unitItem.DemonstrationCardsRawJson = countsResult.DemonstrationCardsRawJson
+                    unitItem.ProgressionCardsEndpointRawJson = countsResult.ProgressionCardsEndpointRawJson
+
+                    ' Only store Total/Completed and compute unit overall % when the endpoint returned
+                    ' the status/count fields we use for the approximation.
+                    If countsResult.Success Then
+                        unitItem.TotalCards = countsResult.TotalCards
+                        unitItem.CompletedCards = countsResult.CompletedCards
+
+                        If Not unitItem.Percentage.HasValue AndAlso countsResult.TotalCards > 0 Then
+                            unitItem.Percentage = Math.Round(CDec((countsResult.CompletedCards / countsResult.TotalCards) * 100D), 2)
+                        End If
+                    End If
+                End If
+            Next
+
+            Return result
+        Catch ex As Exception
+            Return New ExemplarUnitProgressResult With {
+                .IsSuccessful = False,
+                .IsConfigured = True,
+                .ErrorMessage = ex.Message
+            }
+        End Try
+    End Function
+
     Public Async Function UpdateQualificationStatusAsync(userId As String, qualificationId As String, statusValue As String) As Task(Of ExemplarQualificationUpdateResult)
         Dim token As String = GetBearerToken()
         If String.IsNullOrWhiteSpace(token) Then
             Return New ExemplarQualificationUpdateResult With {
                 .IsSuccessful = False,
-                .ErrorMessage = "EXEMPLAR_API_TOKEN is not configured."
+                .ErrorMessage = "Profiling API credentials are not configured."
             }
         End If
 
@@ -305,9 +553,12 @@ Module ExemplarProfilingApi
         If doc Is Nothing Then
             ' 401 or failure: try once to refresh token (run JAR) and retry
             ClearCachedToken()
-            Dim newToken As String = GetBearerToken()
+            ' Force a token refresh from the login JAR so we don't keep reusing an
+            ' old bearer token from settings/env when credentials have changed.
+            Dim newToken As String = TryRefreshTokenFromJar()
             If Not String.IsNullOrWhiteSpace(newToken) Then
-                doc = Await SendJsonRequestCoreAsync(method, url, newToken, payload).ConfigureAwait(False)
+                SetBearerToken(newToken)
+                doc = Await SendJsonRequestCoreAsync(method, url, CachedToken, payload).ConfigureAwait(False)
             End If
         End If
         If doc Is Nothing Then
@@ -316,7 +567,9 @@ Module ExemplarProfilingApi
                 msg = "Exemplar API request failed or returned 401 and token refresh did not succeed. " & LastTokenRefreshError
             Else
                 ' We got a new token but the API still returned 401 = JAR and API mismatch
-                msg = "Exemplar API returned 401 after token refresh. Use the JAR that matches the API: production JAR for default URL (api.profiling.exemplarsystems.com.au), staging JAR only when EXEMPLAR_API_BASE_URL is set to staging."
+                msg = "Exemplar API returned 401 after token refresh (token rejected by API). " &
+                      "baseUrl=" & If(String.IsNullOrWhiteSpace(LastTokenRefreshBaseUrl), "(unknown)", LastTokenRefreshBaseUrl) &
+                      " | jar=" & If(String.IsNullOrWhiteSpace(LastTokenRefreshJarPath), "(unknown)", LastTokenRefreshJarPath)
             End If
             Throw New HttpRequestException(msg)
         End If
@@ -343,6 +596,303 @@ Module ExemplarProfilingApi
                 Return JsonDocument.Parse(body)
             End Using
         End Using
+    End Function
+
+    Private Async Function TryGetContributingCardCountsAsync(token As String, userId As String, qualificationId As String, unitCode As String) As Task(Of CardCountsResult)
+        Dim url As String = $"{GetBaseUrl()}/api/v1/users/{Uri.EscapeDataString(userId)}/qualifications/{Uri.EscapeDataString(qualificationId)}/units/{Uri.EscapeDataString(unitCode)}/progression/cards"
+
+        Try
+            Using doc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, url, token, Nothing)
+                Dim progressionCardsRawJson As String = doc.RootElement.GetRawText()
+                Dim statusCounts As New Dictionary(Of String, Integer)(StringComparer.OrdinalIgnoreCase)
+                CollectStatusCounts(doc.RootElement, statusCounts, 0)
+
+                ' Extract the per-unit cards lists for debug/UI inspection.
+                Dim experienceCardsRaw As String = TryGetFirstCardListRawJson(doc.RootElement,
+                    New String() {"experience_cards", "experienceCards"})
+                Dim demonstrationCardsRaw As String = TryGetFirstCardListRawJson(doc.RootElement,
+                    New String() {"demonstration_cards", "demonstrationCards"})
+
+                If statusCounts.Count = 0 Then
+                    ' Endpoint may still include the experience/demonstration cards lists,
+                    ' but not the status/count fields we use for TotalCards/CompletedCards.
+                    Return New CardCountsResult With {
+                        .Success = False,
+                        .TotalCards = 0,
+                        .CompletedCards = 0,
+                        .ExperienceCardsRawJson = experienceCardsRaw,
+                        .DemonstrationCardsRawJson = demonstrationCardsRaw,
+                        .ProgressionCardsEndpointRawJson = progressionCardsRawJson
+                    }
+                End If
+
+                Dim totalCards As Integer = statusCounts.Values.Sum()
+                Dim completedCards As Integer = statusCounts.
+                    Where(Function(kvp) kvp.Key.IndexOf("APPROVED", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                                      kvp.Key.IndexOf("COMPLETE", StringComparison.OrdinalIgnoreCase) >= 0).
+                    Sum(Function(kvp) kvp.Value)
+
+                Return New CardCountsResult With {
+                    .Success = True,
+                    .TotalCards = totalCards,
+                    .CompletedCards = completedCards,
+                    .ExperienceCardsRawJson = experienceCardsRaw,
+                    .DemonstrationCardsRawJson = demonstrationCardsRaw,
+                    .ProgressionCardsEndpointRawJson = progressionCardsRawJson
+                }
+            End Using
+        Catch
+            Return New CardCountsResult With {.Success = False}
+        End Try
+    End Function
+
+    Private Function TryGetFirstCardListRawJson(root As JsonElement, possiblePropertyNames As IEnumerable(Of String)) As String
+        Dim wantsExperience As Boolean = possiblePropertyNames.Any(Function(n) n.IndexOf("experience", StringComparison.OrdinalIgnoreCase) >= 0)
+        Dim wantsDemonstration As Boolean = possiblePropertyNames.Any(Function(n) n.IndexOf("demonstration", StringComparison.OrdinalIgnoreCase) >= 0)
+        Return TryGetFirstCardListRawJsonInternal(root, possiblePropertyNames, wantsExperience, wantsDemonstration, False, False, 0)
+    End Function
+
+    ' Context-aware extraction:
+    ' Some tenants wrap the card arrays like:
+    '   { "experience": { "cards": [ ... ] }, "demonstration": { "cards": [ ... ] } }
+    ' In that shape, the key "cards" has no "experience" substring, so we must track whether we're
+    ' already inside an "experience" or "demonstration" branch.
+    Private Function TryGetFirstCardListRawJsonInternal(element As JsonElement,
+                                                        possiblePropertyNames As IEnumerable(Of String),
+                                                        wantsExperience As Boolean,
+                                                        wantsDemonstration As Boolean,
+                                                        inExperienceContext As Boolean,
+                                                        inDemonstrationContext As Boolean,
+                                                        depth As Integer) As String
+        If depth > 20 Then Return ""
+
+        Select Case element.ValueKind
+            Case JsonValueKind.Object
+                For Each prop As JsonProperty In element.EnumerateObject()
+                    ' Exact key match first (covers array or object-wrapped).
+                    If possiblePropertyNames.Any(Function(n) String.Equals(n, prop.Name, StringComparison.OrdinalIgnoreCase)) Then
+                        Return prop.Value.GetRawText()
+                    End If
+
+                    Dim propLower As String = prop.Name.ToLowerInvariant()
+                    Dim nextInExperience As Boolean = inExperienceContext OrElse (wantsExperience AndAlso propLower.Contains("experience"))
+                    Dim nextInDemonstration As Boolean = inDemonstrationContext OrElse (wantsDemonstration AndAlso propLower.Contains("demonstration"))
+
+                    ' If we find an array inside the relevant context, return it.
+                    If prop.Value.ValueKind = JsonValueKind.Array Then
+                        If (wantsExperience AndAlso nextInExperience) OrElse (wantsDemonstration AndAlso nextInDemonstration) Then
+                            Return prop.Value.GetRawText()
+                        End If
+                    End If
+
+                    Dim nested As String = TryGetFirstCardListRawJsonInternal(prop.Value,
+                                                                              possiblePropertyNames,
+                                                                              wantsExperience,
+                                                                              wantsDemonstration,
+                                                                              nextInExperience,
+                                                                              nextInDemonstration,
+                                                                              depth + 1)
+                    If Not String.IsNullOrWhiteSpace(nested) Then Return nested
+                Next
+
+            Case JsonValueKind.Array
+                ' If the whole node is an array and we're already in context, accept it.
+                If (wantsExperience AndAlso inExperienceContext) OrElse (wantsDemonstration AndAlso inDemonstrationContext) Then
+                    Return element.GetRawText()
+                End If
+
+                For Each item As JsonElement In element.EnumerateArray()
+                    Dim nested As String = TryGetFirstCardListRawJsonInternal(item,
+                                                                              possiblePropertyNames,
+                                                                              wantsExperience,
+                                                                              wantsDemonstration,
+                                                                              inExperienceContext,
+                                                                              inDemonstrationContext,
+                                                                              depth + 1)
+                    If Not String.IsNullOrWhiteSpace(nested) Then Return nested
+                Next
+        End Select
+
+        Return ""
+    End Function
+
+    Private Sub CollectStatusCounts(element As JsonElement, output As Dictionary(Of String, Integer), depth As Integer)
+        If depth > 12 Then
+            Return
+        End If
+
+        Select Case element.ValueKind
+            Case JsonValueKind.Object
+                Dim status As String = GetStringByPossibleKeys(element, New String() {"status", "card_status", "state"})
+                Dim count As Integer
+                If Not String.IsNullOrWhiteSpace(status) AndAlso TryGetIntegerByPossibleKeys(element, New String() {"count", "total", "value"}, count) Then
+                    If output.ContainsKey(status) Then
+                        output(status) += count
+                    Else
+                        output(status) = count
+                    End If
+                End If
+
+                For Each prop As JsonProperty In element.EnumerateObject()
+                    CollectStatusCounts(prop.Value, output, depth + 1)
+                Next
+
+            Case JsonValueKind.Array
+                For Each item As JsonElement In element.EnumerateArray()
+                    CollectStatusCounts(item, output, depth + 1)
+                Next
+        End Select
+    End Sub
+
+    Private Sub CollectUnitProgress(element As JsonElement, output As Dictionary(Of String, ExemplarUnitProgressItem), requestedCodes As HashSet(Of String), depth As Integer)
+        If depth > 12 Then
+            Return
+        End If
+
+        Select Case element.ValueKind
+            Case JsonValueKind.Object
+                Dim codeCandidate As String = GetStringByPossibleKeys(element, New String() {"unit_code", "unitCode", "unit", "unit_id", "unitId"})
+                If LooksLikeUnitCode(codeCandidate) Then
+                    Dim normalizedCode As String = codeCandidate.Trim().ToUpperInvariant()
+                    If requestedCodes Is Nothing OrElse requestedCodes.Contains(normalizedCode) Then
+                        If Not output.ContainsKey(normalizedCode) Then
+                            output(normalizedCode) = New ExemplarUnitProgressItem With {
+                                .UnitCode = normalizedCode
+                            }
+                        End If
+
+                        Dim percentageValue As Decimal
+                        If TryGetDecimalByPossibleKeys(element, New String() {"percentage", "completion_percentage", "completionPercentage", "progress_percentage", "progressPercentage"}, percentageValue) Then
+                            output(normalizedCode).Percentage = percentageValue
+                        End If
+
+                        Dim statusValue As String = GetStringByPossibleKeys(element, New String() {"status", "state", "completion_status"})
+                        If Not String.IsNullOrWhiteSpace(statusValue) Then
+                            output(normalizedCode).Status = statusValue
+                        End If
+                    End If
+                End If
+
+                For Each prop As JsonProperty In element.EnumerateObject()
+                    CollectUnitProgress(prop.Value, output, requestedCodes, depth + 1)
+                Next
+
+            Case JsonValueKind.Array
+                For Each item As JsonElement In element.EnumerateArray()
+                    CollectUnitProgress(item, output, requestedCodes, depth + 1)
+                Next
+        End Select
+    End Sub
+
+    ' Parses qualification payload:
+    ' - calculation.demonstration_progression.unit_demonstration_statuses[*].percentage
+    ' - calculation.experience_progression.unit_experience_statuses[*].percentage (if present)
+    Private Sub CollectExperienceAndDemonstrationPercentages(root As JsonElement,
+                                                              output As Dictionary(Of String, ExemplarUnitProgressItem),
+                                                              requestedCodes As HashSet(Of String))
+        Try
+            CollectUnitPercentFromStatusArray(root,
+                                               output,
+                                               requestedCodes,
+                                               "unit_demonstration_statuses",
+                                               Function(item As JsonElement) True,
+                                               Sub(unitCode As String, pct As Decimal)
+                                                   Dim normalized As String = unitCode.Trim().ToUpperInvariant()
+                                                   If output.ContainsKey(normalized) Then
+                                                       output(normalized).DemonstrationCardsPercentage = pct
+                                                   End If
+                                               End Sub)
+
+            ' Experience may not exist on all qualification payloads.
+            CollectUnitPercentFromStatusArray(root,
+                                               output,
+                                               requestedCodes,
+                                               "unit_experience_statuses",
+                                               Function(item As JsonElement) True,
+                                               Sub(unitCode As String, pct As Decimal)
+                                                   Dim normalized As String = unitCode.Trim().ToUpperInvariant()
+                                                   If output.ContainsKey(normalized) Then
+                                                       output(normalized).ExperienceCardsPercentage = pct
+                                                   End If
+                                               End Sub)
+        Catch
+            ' Best-effort parsing; UI still shows N/A if unavailable.
+        End Try
+    End Sub
+
+    Private Sub CollectUnitPercentFromStatusArray(root As JsonElement,
+                                                    output As Dictionary(Of String, ExemplarUnitProgressItem),
+                                                    requestedCodes As HashSet(Of String),
+                                                    statusArrayPropertyName As String,
+                                                    predicate As Func(Of JsonElement, Boolean),
+                                                    applyPercent As Action(Of String, Decimal),
+                                                    Optional depth As Integer = 0)
+        If depth > 20 Then Return
+
+        Select Case root.ValueKind
+            Case JsonValueKind.Object
+                For Each prop As JsonProperty In root.EnumerateObject()
+                    Dim propName = prop.Name
+                    If String.Equals(propName, statusArrayPropertyName, StringComparison.OrdinalIgnoreCase) Then
+                        If prop.Value.ValueKind = JsonValueKind.Array Then
+                            For Each item In prop.Value.EnumerateArray()
+                                If Not predicate(item) Then Continue For
+
+                                Dim unitCode As String = GetStringByPossibleKeys(item, New String() {"unit_code", "unitCode", "unit", "unit_id", "unitId"})
+                                If String.IsNullOrWhiteSpace(unitCode) Then
+                                    unitCode = GetStringFromNestedId(item)
+                                End If
+
+                                If String.IsNullOrWhiteSpace(unitCode) Then Continue For
+
+                                Dim pct As Decimal
+                                If TryGetDecimalByPossibleKeys(item, New String() {"percentage", "completion_percentage", "completionPercentage", "progress_percentage", "progressPercentage"}, pct) Then
+                                    Dim normalized As String = unitCode.Trim().ToUpperInvariant()
+                                    If requestedCodes Is Nothing OrElse requestedCodes.Contains(normalized) Then
+                                        applyPercent(unitCode, pct)
+                                    End If
+                                End If
+                            Next
+                        End If
+                    Else
+                        CollectUnitPercentFromStatusArray(prop.Value, output, requestedCodes, statusArrayPropertyName, predicate, applyPercent, depth + 1)
+                    End If
+                Next
+
+            Case JsonValueKind.Array
+                For Each item In root.EnumerateArray()
+                    CollectUnitPercentFromStatusArray(item, output, requestedCodes, statusArrayPropertyName, predicate, applyPercent, depth + 1)
+                Next
+        End Select
+    End Sub
+
+    Private Function GetStringFromNestedId(item As JsonElement) As String
+        If item.ValueKind <> JsonValueKind.Object Then Return ""
+        For Each prop As JsonProperty In item.EnumerateObject()
+            If String.Equals(prop.Name, "id", StringComparison.OrdinalIgnoreCase) AndAlso prop.Value.ValueKind = JsonValueKind.Object Then
+                Return GetStringByPossibleKeys(prop.Value, New String() {"unit_code", "unitCode", "unit"})
+            End If
+        Next
+        Return ""
+    End Function
+
+    Private Function LooksLikeUnitCode(value As String) As Boolean
+        If String.IsNullOrWhiteSpace(value) Then
+            Return False
+        End If
+
+        Dim candidate As String = value.Trim().ToUpperInvariant()
+        If candidate.Contains(" "c) Then
+            Return False
+        End If
+
+        If candidate.Length < 5 Then
+            Return False
+        End If
+
+        Dim hasLetter As Boolean = candidate.Any(Function(c) Char.IsLetter(c))
+        Dim hasDigit As Boolean = candidate.Any(Function(c) Char.IsDigit(c))
+        Return hasLetter AndAlso hasDigit
     End Function
 
     Private Sub CollectUserCandidates(element As JsonElement, output As List(Of ExemplarUserCandidate), depth As Integer)
@@ -549,6 +1099,28 @@ Module ExemplarProfilingApi
         End Select
     End Sub
 
+    Private Function TryGetIntegerByPossibleKeys(element As JsonElement, keys As IEnumerable(Of String), ByRef value As Integer) As Boolean
+        For Each key In keys
+            Dim prop As JsonElement
+            If element.TryGetProperty(key, prop) Then
+                Return TryParseInteger(prop, value)
+            End If
+        Next
+
+        Return False
+    End Function
+
+    Private Function TryGetDecimalByPossibleKeys(element As JsonElement, keys As IEnumerable(Of String), ByRef value As Decimal) As Boolean
+        For Each key In keys
+            Dim prop As JsonElement
+            If element.TryGetProperty(key, prop) Then
+                Return TryParseDecimal(prop, value)
+            End If
+        Next
+
+        Return False
+    End Function
+
     Private Function TryParseInteger(value As JsonElement, ByRef result As Integer) As Boolean
         Select Case value.ValueKind
             Case JsonValueKind.Number
@@ -564,6 +1136,18 @@ Module ExemplarProfilingApi
 
             Case JsonValueKind.String
                 Return Integer.TryParse(value.GetString(), result)
+        End Select
+
+        Return False
+    End Function
+
+    Private Function TryParseDecimal(value As JsonElement, ByRef result As Decimal) As Boolean
+        Select Case value.ValueKind
+            Case JsonValueKind.Number
+                Return value.TryGetDecimal(result)
+            Case JsonValueKind.String
+                Return Decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.InvariantCulture, result) OrElse
+                    Decimal.TryParse(value.GetString(), NumberStyles.Any, CultureInfo.CurrentCulture, result)
         End Select
 
         Return False
@@ -708,6 +1292,10 @@ Module ExemplarProfilingApi
     End Function
 
     Private Function GetBaseUrl() As String
+        If Not String.IsNullOrWhiteSpace(My.Settings.ExemplarApiBaseUrl) Then
+            Return My.Settings.ExemplarApiBaseUrl.Trim().TrimEnd("/"c)
+        End If
+
         Dim envBase As String = Environment.GetEnvironmentVariable("EXEMPLAR_API_BASE_URL")
         If String.IsNullOrWhiteSpace(envBase) Then
             Return DefaultBaseUrl
@@ -721,7 +1309,10 @@ Module ExemplarProfilingApi
             Return CachedToken
         End If
 
-        Dim token As String = Environment.GetEnvironmentVariable("EXEMPLAR_API_TOKEN")
+        Dim token As String = My.Settings.ExemplarApiToken
+        If String.IsNullOrWhiteSpace(token) Then
+            token = Environment.GetEnvironmentVariable("EXEMPLAR_API_TOKEN")
+        End If
         If String.IsNullOrWhiteSpace(token) Then
             token = Environment.GetEnvironmentVariable("EXEMPLAR_BEARER_TOKEN")
         End If
@@ -742,17 +1333,22 @@ Module ExemplarProfilingApi
     ''' <summary>Runs the Exemplar login JAR with username/password (hardcoded above; env vars override) and returns the Bearer token. Uses embedded JAR if present, else EXEMPLAR_LOGIN_JAR_PATH or app directory.</summary>
     Private Function TryRefreshTokenFromJar() As String
         LastTokenRefreshError = ""
+        LastTokenRefreshBaseUrl = GetBaseUrl()
+        LastTokenRefreshJarPath = ""
+        LastTokenRefreshUsernameUsed = ""
         ' Credentials: hardcoded ExemplarApiUsername / ExemplarApiPassword; env vars override if set
         Dim username As String = Environment.GetEnvironmentVariable("EXEMPLAR_API_USERNAME")?.Trim()
         Dim password As String = Environment.GetEnvironmentVariable("EXEMPLAR_API_PASSWORD")
         If String.IsNullOrWhiteSpace(username) Then username = ExemplarApiUsername?.Trim()
         If String.IsNullOrWhiteSpace(password) Then password = ExemplarApiPassword
+        LastTokenRefreshUsernameUsed = If(username, "").Trim()
         If String.IsNullOrWhiteSpace(username) OrElse String.IsNullOrWhiteSpace(password) Then
             LastTokenRefreshError = "Username or password not set."
             Return ""
         End If
 
         Dim jarPath As String = GetLoginJarPath()
+        LastTokenRefreshJarPath = jarPath
         If String.IsNullOrWhiteSpace(jarPath) Then
             LastTokenRefreshError = "Login JAR not found (add ExemplarLogin.jar or ExemplarLoginDev.jar to the app folder, or set EXEMPLAR_LOGIN_JAR_PATH)."
             Return ""
@@ -794,6 +1390,29 @@ Module ExemplarProfilingApi
                     End If
                     ' Take first line only and strip any newlines (header values must not contain CR/LF)
                     Dim token As String = SanitizeTokenForHeader(output)
+                    ' The login JAR may output either the raw token or "Bearer <token>".
+                    ' Normalize so callers can always send it as: Authorization: Bearer <token>
+                    If token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) Then
+                        token = token.Substring("Bearer ".Length).Trim()
+                    End If
+                    ' If auth failed, the jar may print an error line (e.g. "Auth failed....")
+                    ' which we must not treat as a bearer token.
+                    If String.IsNullOrWhiteSpace(token) _
+                        OrElse token.Equals("null", StringComparison.OrdinalIgnoreCase) _
+                        OrElse token.StartsWith("Auth failed", StringComparison.OrdinalIgnoreCase) _
+                        OrElse token.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                        ' Keep the raw jar line as the error detail.
+                        LastTokenRefreshError = "Login JAR authentication failed: " & token
+                        Return ""
+                    End If
+
+                    ' Basic sanity-check: most bearer tokens are JWT-like (contain 2 dots).
+                    ' If it doesn't look like a token, treat it as failure.
+                    Dim dotCount As Integer = token.Count(Function(ch) ch = "."c)
+                    If token.Length < 20 OrElse dotCount < 2 Then
+                        LastTokenRefreshError = "Login JAR returned unexpected output (not a token). FirstLine=" & token
+                        Return ""
+                    End If
                     If Not String.IsNullOrWhiteSpace(token) Then
                         Return token
                     End If
@@ -860,7 +1479,19 @@ Module ExemplarProfilingApi
 
     ''' <summary>True when EXEMPLAR_API_BASE_URL is set (staging/dev); then app uses ExemplarLoginDev.jar if present.</summary>
     Private Function IsStagingApi() As Boolean
-        Return Not String.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("EXEMPLAR_API_BASE_URL"))
+        Dim baseUrl As String = ""
+        If Not String.IsNullOrWhiteSpace(My.Settings.ExemplarApiBaseUrl) Then
+            baseUrl = My.Settings.ExemplarApiBaseUrl
+        Else
+            baseUrl = Environment.GetEnvironmentVariable("EXEMPLAR_API_BASE_URL")
+        End If
+
+        If String.IsNullOrWhiteSpace(baseUrl) Then Return False
+
+        ' Only treat it as staging when the effective base URL actually indicates staging/dev.
+        ' This avoids using the staging JAR for production API tokens.
+        Dim v As String = baseUrl.Trim().ToLowerInvariant()
+        Return v = "staging" OrElse v.Contains("staging") OrElse v.Contains("dev")
     End Function
 
     ''' <summary>Returns path to the login JAR: embedded (ExemplarLogin.jar = production, ExemplarLoginDev.jar = staging), then EXEMPLAR_LOGIN_JAR_PATH, then app directory. Creates temp file if extracted from assembly.</summary>
