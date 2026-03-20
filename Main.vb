@@ -39,8 +39,47 @@ Public Class MainFrm
 
     ' Declare teacher list workbook and worksheet
     Private Sub UpdateReconnectButtonVisibility()
-        ' Show the reconnect button if the connection is closed, hide it otherwise
-        btnReconnect.Visible = (connection.State = ConnectionState.Closed)
+        ' Show reconnect button if either side is "down":
+        ' - SQL: connection is closed
+        ' - API: profiling API is not configured (no usable bearer token)
+        Dim sqlClosed As Boolean = (connection Is Nothing) OrElse (connection.State = ConnectionState.Closed)
+        Dim apiClosed As Boolean = Not ExemplarProfilingApi.IsConfigured()
+        btnReconnect.Visible = sqlClosed OrElse apiClosed
+    End Sub
+
+    ''' <summary>
+    ''' Reconnect SQL and also force the Exemplar API to re-initialize (refresh token).
+    ''' </summary>
+    Private Async Sub btnReconnect_Click(sender As Object, e As EventArgs) Handles btnReconnect.Click
+        Try
+            Dim sqlClosed As Boolean = (connection Is Nothing) OrElse (connection.State = ConnectionState.Closed)
+            Dim apiClosed As Boolean = Not ExemplarProfilingApi.IsConfigured()
+
+            ' Re-open only the closed connection(s).
+            If sqlClosed Then
+                SQLCon.OpenConnection(connection)
+            End If
+            UpdateReconnectButtonVisibility()
+
+            If apiClosed Then
+                ' Force a fresh bearer token next time we call the API.
+                ExemplarProfilingApi.ClearCachedToken()
+            End If
+
+            If ExemplarProfilingApi.IsConfigured() Then
+                SetProfilingApiStatus("Ready", "", Color.DarkGreen)
+            Else
+                SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
+            End If
+
+            ' If a student is already selected, refresh profiling so the UI reflects the reconnect.
+            If StudentCB.SelectedIndex >= 0 AndAlso StudentCB.SelectedItem IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(StudentIDLBL.Text) Then
+                Await RefreshSelectedStudentProfilingAsync()
+                UpdateExemplarProfilingEmailButtonVisibility()
+            End If
+        Catch ex As System.Exception
+            SetProfilingApiStatus("Error reconnecting", ex.Message, Color.Maroon)
+        End Try
     End Sub
     Private Function IsOutlookInstalled() As Boolean
         Dim registryCheckResult As Boolean = RegistryCheck()
@@ -119,8 +158,7 @@ Public Class MainFrm
                 MessageBox.Show("Notification: Access to P-Drive Unavailable" & vbCrLf & vbCrLf & "It appears that access to the P-Drive directory is currently unavailable. We recommend reaching out to your IT department for further assistance." & vbCrLf & vbCrLf & "Please note that while this program will continue to operate without access to the P-Drive directory, it is essential to recognize that you will lose the capability to receive software updates.", "P-Drive Access Unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning)
             End If
 
-            ' Set visibility of reconnect button
-            btnReconnect.Visible = (connection.State = ConnectionState.Closed)
+            ' Set visibility of reconnect button (SQL closed OR API not configured)
             ConfigureResponsiveLayout()
             ' Configure the timer control
             connectionCheckTimer.Interval = 1000 ' 1 second interval
@@ -485,6 +523,7 @@ Public Class MainFrm
 
         If Not lookupResult.IsConfigured Then
             SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
+            UpdateReconnectButtonVisibility()
             Return
         End If
 
@@ -512,6 +551,10 @@ Public Class MainFrm
         Else
             SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
         End If
+
+        ' Token may have been cleared (401 -> ClearCachedToken) during the lookup attempt.
+        ' Refresh button visibility so reconnect appears/disappears immediately.
+        UpdateReconnectButtonVisibility()
     End Function
 
     ''' <summary>Shows email editor. Returns Nothing if cancelled, otherwise trimmed text (may be empty to clear SQL override).</summary>
@@ -594,6 +637,7 @@ Public Class MainFrm
 
         If Not ExemplarProfilingApi.IsConfigured() Then
             MessageBox.Show("Profiling API is not configured for this installation.", "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            UpdateReconnectButtonVisibility()
             Return
         End If
 
@@ -608,6 +652,7 @@ Public Class MainFrm
 
             If Not apiResult.IsConfigured Then
                 MessageBox.Show(apiResult.DetailText, "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                UpdateReconnectButtonVisibility()
                 Return
             End If
 
