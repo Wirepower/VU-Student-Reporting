@@ -15,6 +15,7 @@ Public Class StudentUnits
     Friend Shared studentUnitsForm As New StudentUnits()
     Private ReadOnly unitCheckBoxes As New Dictionary(Of String, CheckBox)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly originalCheckBoxText As New Dictionary(Of CheckBox, String)
+    Private isRevertingUnitOverride As Boolean = False
     
 
 
@@ -68,10 +69,102 @@ Public Class StudentUnits
         SelectedStudentLBL.Text = MainFrm.SelectedStudentLBL.Text
     End Sub
 
+    Private Function PromptOverridePassword() As String
+        Using prompt As New Form()
+            prompt.Text = "Admin Override Required"
+            prompt.StartPosition = FormStartPosition.CenterParent
+            prompt.FormBorderStyle = FormBorderStyle.FixedDialog
+            prompt.MaximizeBox = False
+            prompt.MinimizeBox = False
+            prompt.ClientSize = New Size(420, 140)
+
+            Dim lbl As New Label() With {
+                .AutoSize = False,
+                .Location = New Point(12, 12),
+                .Size = New Size(396, 35),
+                .Text = "This requires ADMIN authority to override. Input Password"
+            }
+
+            Dim txt As New TextBox() With {
+                .Location = New Point(12, 55),
+                .Size = New Size(396, 24),
+                .UseSystemPasswordChar = True
+            }
+
+            Dim okBtn As New Button() With {
+                .Text = "OK",
+                .Location = New Point(252, 95),
+                .DialogResult = DialogResult.OK
+            }
+
+            Dim cancelBtn As New Button() With {
+                .Text = "Cancel",
+                .Location = New Point(333, 95),
+                .DialogResult = DialogResult.Cancel
+            }
+
+            prompt.Controls.Add(lbl)
+            prompt.Controls.Add(txt)
+            prompt.Controls.Add(okBtn)
+            prompt.Controls.Add(cancelBtn)
+            prompt.AcceptButton = okBtn
+            prompt.CancelButton = cancelBtn
+
+            Dim result As DialogResult = prompt.ShowDialog(Me)
+            If result = DialogResult.OK Then
+                Return txt.Text
+            End If
+        End Using
+
+        Return Nothing
+    End Function
+
+    Private Function EnsureAdminOverrideAuthorized(targetCheckBox As CheckBox) As Boolean
+        If targetCheckBox Is Nothing Then
+            Return False
+        End If
+
+        If isRevertingUnitOverride Then
+            Return False
+        End If
+
+        ' Programmatic SQL/UI state loads should not be blocked by the admin prompt.
+        If Not targetCheckBox.Focused Then
+            Return True
+        End If
+
+        Dim enteredPassword As String = PromptOverridePassword()
+        If enteredPassword Is Nothing Then
+            isRevertingUnitOverride = True
+            Try
+                targetCheckBox.Checked = Not targetCheckBox.Checked
+            Finally
+                isRevertingUnitOverride = False
+            End Try
+            Return False
+        End If
+
+        Dim adminPasswords() As String = {"Wpower84", "Admin123"}
+        Dim isAdmin As Boolean = adminPasswords.Any(Function(p) String.Equals(enteredPassword, p, StringComparison.Ordinal))
+        If isAdmin Then
+            Return True
+        End If
+
+        MessageBox.Show("Incorrect Password, logged in as normal user")
+        isRevertingUnitOverride = True
+        Try
+            targetCheckBox.Checked = Not targetCheckBox.Checked
+        Finally
+            isRevertingUnitOverride = False
+        End Try
+        Return False
+    End Function
+
     Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECO0023" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox1.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox1) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -83,6 +176,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0007" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox2.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox2) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -94,6 +188,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0019" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox3.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox3) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -104,6 +199,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0020" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox4.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox4) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -115,6 +211,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0051" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox5.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox5) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -126,6 +223,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0046" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox6.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox6) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -137,6 +235,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0044" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox7.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox7) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -149,6 +248,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0021" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox8.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox8) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -161,6 +261,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0019" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox9.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox9) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -172,6 +273,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEERE0001" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox10.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox10) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -184,6 +286,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0023" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox11.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox11) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -196,6 +299,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0020" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox12.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox12) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -207,6 +311,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0025" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox13.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox13) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -219,6 +324,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0024" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox14.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox14) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -231,6 +337,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0008" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox15.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox15) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -240,6 +347,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0009" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox16.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox16) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -252,6 +360,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0010" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox17.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox17) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -264,6 +373,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEDV0005" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox18.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox18) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -275,6 +385,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEDV0008" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox19.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox19) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -287,6 +398,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0003" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox20.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox20) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -298,6 +410,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0018" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox21.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox21) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -310,6 +423,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0005" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox22.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox22) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -321,6 +435,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0016" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox23.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox23) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -333,6 +448,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0047" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox24.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox24) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -345,6 +461,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "HLTAID009" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox25.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox25) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -356,6 +473,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UETDRRF004" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox26.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox26) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -368,6 +486,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0014" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox27.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox27) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -381,6 +500,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0012" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox28.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox28) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -394,6 +514,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0039" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox29.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox29) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)

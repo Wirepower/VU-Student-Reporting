@@ -139,7 +139,7 @@ Public Class MainFrm
             If ExemplarProfilingApi.IsConfigured() Then
                 SetProfilingApiStatus("Ready", "", Color.DarkGreen)
             Else
-            SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
+                SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
             End If
             'Put Code here - Load Form/application
 
