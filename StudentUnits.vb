@@ -1501,6 +1501,13 @@ Public Class StudentUnits
 
     Private Async Sub RefreshProfilingBtn_Click(sender As Object, e As EventArgs) Handles RefreshProfilingBtn.Click
         InitializeUnitCheckBoxMap()
+        Dim studentId As String = MainFrm.StudentIDLBL.Text?.Trim()
+        Dim firstName As String = MainFrm.StudentFirstnameLBL.Text?.Trim()
+        Dim lastName As String = MainFrm.StudentSurnameLBL.Text?.Trim()
+        Dim agreementEmail As String = MainFrm.StudentEmailLBL.Text?.Trim()
+        ExemplarEmailOverrides.InvalidateCacheForStudent(studentId)
+        Dim overrideEmail As String = ExemplarEmailOverrides.GetOverride(studentId)
+        Dim lookupEmail As String = If(String.IsNullOrWhiteSpace(overrideEmail), agreementEmail, overrideEmail)
 
         If unitCheckBoxes.Count = 0 Then
             SetProfilingSummary("No unit checkboxes were found to update.", Color.Maroon)
@@ -1513,9 +1520,9 @@ Public Class StudentUnits
 
         Try
             Dim result As ExemplarUnitProgressResult = Await ExemplarProfilingApi.GetStudentUnitProgressAsync(
-                MainFrm.StudentFirstnameLBL.Text,
-                MainFrm.StudentSurnameLBL.Text,
-                MainFrm.StudentEmailLBL.Text,
+                firstName,
+                lastName,
+                lookupEmail,
                 "",
                 unitCheckBoxes.Keys,
                 New String() {

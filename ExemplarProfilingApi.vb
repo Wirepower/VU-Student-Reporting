@@ -539,9 +539,13 @@ Module ExemplarProfilingApi
     End Function
 
     Private Async Function FindStudentAsync(token As String, firstName As String, lastName As String, email As String) As Task(Of ExemplarUserCandidate)
-        Dim searchUrl As String = $"{GetBaseUrl()}/api/v1/users?roles=STUDENT&firstName={WebUtility.UrlEncode(firstName)}&lastName={WebUtility.UrlEncode(lastName)}"
+        ' If an email is supplied (eg DB override), rely on the email filter alone.
+        ' This avoids "name mismatch" cases where the email belongs to a different Exemplar profile.
+        Dim searchUrl As String
         If Not String.IsNullOrWhiteSpace(email) Then
-            searchUrl &= "&email=" & WebUtility.UrlEncode(email.Trim())
+            searchUrl = $"{GetBaseUrl()}/api/v1/users?roles=STUDENT&email={WebUtility.UrlEncode(email.Trim())}"
+        Else
+            searchUrl = $"{GetBaseUrl()}/api/v1/users?roles=STUDENT&firstName={WebUtility.UrlEncode(firstName)}&lastName={WebUtility.UrlEncode(lastName)}"
         End If
 
         Using doc As JsonDocument = Await SendJsonRequestAsync(HttpMethod.Get, searchUrl, token, Nothing)
@@ -946,6 +950,19 @@ Module ExemplarProfilingApi
                     Return candidate
                 End If
             Next
+
+            ' Email was explicitly provided (for example, a DB override),
+            ' so prefer returning the API-filtered candidate even if the API
+            ' response body doesn't include an `email` field.
+            '
+            ' If the API filtered by email returns >1, keep existing safety:
+            ' only accept when we can disambiguate (single candidate) OR
+            ' the API actually included the matching email.
+            If candidates.Count = 1 Then
+                Return candidates(0)
+            End If
+
+            Return Nothing
         End If
 
         If Not String.IsNullOrWhiteSpace(normalizedFirst) AndAlso Not String.IsNullOrWhiteSpace(normalizedLast) Then

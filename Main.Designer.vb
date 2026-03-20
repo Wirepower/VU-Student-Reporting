@@ -1091,14 +1091,15 @@ Partial Class MainFrm
         ProfilingLastCardValLbl.TabIndex = 104
         ProfilingLastCardValLbl.Text = "?"
         ProfilingLastCardValLbl.Visible = False
+        ' 
         ' Button11
         ' 
         Button11.Font = New Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
-        Button11.Location = New Point(780, 38)
+        Button11.Location = New Point(238, 250)
         Button11.Name = "Button11"
-        Button11.Size = New Size(220, 30)
+        Button11.Size = New Size(118, 109)
         Button11.TabIndex = 97
-        Button11.Text = "Set Exemplar profiling email"
+        Button11.Text = "Amend/Assign Exemplar profiling email"
         Button11.UseVisualStyleBackColor = True
         Button11.Visible = False
         ' 
@@ -1107,7 +1108,6 @@ Partial Class MainFrm
         AutoScaleDimensions = New SizeF(96F, 96F)
         AutoScaleMode = AutoScaleMode.Dpi
         AutoScroll = True
-        AutoSize = False
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
         Controls.Add(ProfilingLastCardValLbl)

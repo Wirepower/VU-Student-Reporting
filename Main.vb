@@ -495,9 +495,10 @@ Public Class MainFrm
                 "No matching Exemplar student was found for " & firstName & " " & lastName & "." & vbCrLf & vbCrLf &
                 "Enter the student's Exemplar profiling email address to try again (or leave blank to skip):",
                 "Profiling email",
-                ""
+                lookupEmail
             )
             If Not String.IsNullOrWhiteSpace(profilingEmail) Then
+                ExemplarEmailOverrides.SetOverride(studentId, profilingEmail.Trim())
                 SetProfilingApiStatus("Checking", "Retrying with profiling email...", Color.SteelBlue)
                 lookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, profilingEmail.Trim())
                 If lookupResult.IsSuccessful Then
@@ -522,13 +523,15 @@ Public Class MainFrm
             dlg.MinimizeBox = False
             dlg.MaximizeBox = False
             dlg.ShowInTaskbar = False
-            dlg.ClientSize = New Size(500, 168)
+            ' Give the buttons enough room under higher DPI/font scaling.
+            ' Extra height so scaled fonts don't clip the buttons.
+            dlg.ClientSize = New Size(540, 190)
             dlg.Font = Me.Font
 
             Dim infoLbl As New Label() With {
                 .Left = 12,
                 .Top = 12,
-                .Width = 476,
+                .Width = 516,
                 .Height = 56,
                 .AutoSize = False,
                 .Text = infoMessage
@@ -537,22 +540,24 @@ Public Class MainFrm
             Dim emailTb As New TextBox() With {
                 .Left = 12,
                 .Top = 74,
-                .Width = 476,
+                .Width = 516,
                 .Text = If(initialEmail, "")
             }
 
             Dim saveBtn As New Button() With {
                 .Text = "Save",
                 .Left = 290,
-                .Top = 118,
+                .Top = 112,
                 .Width = 96,
+                .Height = 32,
                 .DialogResult = DialogResult.OK
             }
             Dim cancelBtn As New Button() With {
                 .Text = "Cancel",
                 .Left = 392,
-                .Top = 118,
+                .Top = 112,
                 .Width = 96,
+                .Height = 32,
                 .DialogResult = DialogResult.Cancel
             }
 
@@ -1364,6 +1369,7 @@ Public Class MainFrm
 
 
         UpdateLabels(selectedStudent)
+        UpdateExemplarProfilingEmailButtonVisibility()
         ExemplarEmailOverrides.InvalidateCacheForStudent(StudentIDLBL.Text?.Trim())
 
         ' Update SelectedStudentLBL
@@ -1409,6 +1415,7 @@ Public Class MainFrm
         End If
 
         Await RefreshSelectedStudentProfilingAsync()
+        UpdateExemplarProfilingEmailButtonVisibility()
 
         '-------------------Need to look at below----------------------------
 

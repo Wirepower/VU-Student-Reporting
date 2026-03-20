@@ -89,8 +89,15 @@ Module ExemplarEmailOverrides
                     Return s
                 End Using
             End Using
-        Catch
+        Catch ex As Exception
             hadSqlError = True
+            Try
+                Dim debugPath As String = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExemplarDbOverrideErrors.txt")
+                System.IO.File.AppendAllText(debugPath,
+                    $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} LOAD failed for StudentID='{studentId}': {ex.Message}" & Environment.NewLine)
+            Catch
+                ' Ignore debug logging failures.
+            End Try
             Return ""
         End Try
     End Function
