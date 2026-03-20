@@ -137,14 +137,14 @@ Partial Class MainFrm
         Button1.Location = New Point(1044, 24)
         Button1.Margin = New Padding(4)
         Button1.Name = "Button1"
-        Button1.Size = New Size(170, 41)
+        Button1.Size = New Size(170, 51)
         Button1.TabIndex = 1
         Button1.Text = "Check for Updates"
         Button1.UseVisualStyleBackColor = True
         ' 
         ' Button2
         ' 
-        Button2.Location = New Point(1227, 73)
+        Button2.Location = New Point(1227, 88)
         Button2.Margin = New Padding(4)
         Button2.Name = "Button2"
         Button2.Size = New Size(170, 50)
@@ -946,9 +946,9 @@ Partial Class MainFrm
         ' 
         Button9.Location = New Point(1227, 24)
         Button9.Name = "Button9"
-        Button9.Size = New Size(170, 41)
+        Button9.Size = New Size(170, 51)
         Button9.TabIndex = 90
-        Button9.Text = "Report a Issue/Bug"
+        Button9.Text = "Issue Report    Feature Request"
         Button9.UseVisualStyleBackColor = True
         ' 
         ' resitLabel
