@@ -948,7 +948,8 @@ Partial Class MainFrm
         Button9.Name = "Button9"
         Button9.Size = New Size(170, 51)
         Button9.TabIndex = 90
-        Button9.Text = "Issue Report    Feature Request"
+        Button9.Text = "Issue Report" & vbCrLf & "Feature Request"
+        Button9.TextAlign = ContentAlignment.MiddleCenter
         Button9.UseVisualStyleBackColor = True
         ' 
         ' resitLabel
