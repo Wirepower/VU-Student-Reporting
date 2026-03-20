@@ -13,6 +13,8 @@ Public Class ExemplarProfileLookupResult
     Public Property IsSuccessful As Boolean
     Public Property IsConfigured As Boolean
     Public Property UserId As String
+    ''' <summary>Email on the matched Exemplar user record (when lookup succeeds and API provides it).</summary>
+    Public Property MatchedUserEmail As String
     Public Property StatusText As String
     Public Property DetailText As String
     Public Property TotalCards As Integer?
@@ -306,6 +308,7 @@ Module ExemplarProfilingApi
                     .IsSuccessful = True,
                     .IsConfigured = True,
                     .UserId = student.Id,
+                    .MatchedUserEmail = If(student.Email, "").Trim(),
                     .StatusText = "Connected",
                     .DetailText = detail,
                     .TotalCards = totalCards,
@@ -905,7 +908,7 @@ Module ExemplarProfilingApi
                 Dim id As String = GetStringByPossibleKeys(element, New String() {"id", "user_id", "userId"})
                 Dim firstName As String = GetStringByPossibleKeys(element, New String() {"first_name", "firstName", "given_name", "givenName"})
                 Dim lastName As String = GetStringByPossibleKeys(element, New String() {"last_name", "lastName", "family_name", "familyName"})
-                Dim email As String = GetStringByPossibleKeys(element, New String() {"email", "student_email", "personal_email"})
+                Dim email As String = GetStringByPossibleKeys(element, New String() {"email", "student_email", "personal_email", "emailAddress", "email_address", "user_email", "contact_email"})
 
                 If Not String.IsNullOrWhiteSpace(id) AndAlso
                     (Not String.IsNullOrWhiteSpace(firstName) OrElse Not String.IsNullOrWhiteSpace(lastName) OrElse Not String.IsNullOrWhiteSpace(email)) Then

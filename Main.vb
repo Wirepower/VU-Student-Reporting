@@ -74,7 +74,7 @@ Public Class MainFrm
             Return False
         End If
     End Function
-    Private Sub MainFrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
+    Private Async Sub MainFrm_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim loadingForm As New LoadingForm()
         loadingForm.Show()
         ' Define custom increments
@@ -212,8 +212,9 @@ Public Class MainFrm
             ' Close the loading form once loading is finished
             loadingForm.Close()
 
-            ' Stage 2 OTA: check for updates on startup (async so UI thread is not blocked and main form can appear).
-            BeginInvoke(New MethodInvoker(Sub() RunStartupUpdateCheckAsync()))
+            ' Stage 2 OTA: check for mandatory updates on startup.
+            ' Await so the UI thread can continue painting/showing the main window.
+            Await CheckForUpdatesAsync(showNoUpdateMessage:=False)
         Else
             Me.Hide()
             SQLError.Show()
@@ -379,6 +380,7 @@ Public Class MainFrm
 
         ' ---- Notes area ----
         Label32.Anchor = AnchorStyles.Top Or AnchorStyles.Left
+        Button11.Anchor = AnchorStyles.Top Or AnchorStyles.Left
         NotesTB.Anchor = AnchorStyles.Top Or AnchorStyles.Left Or AnchorStyles.Right
 
         ' ---- Full-width action buttons (Submit / Student Investigation) ----
@@ -459,10 +461,19 @@ Public Class MainFrm
         ProfilingLastCardValLbl.Visible = True
     End Sub
 
+    Private Sub UpdateExemplarProfilingEmailButtonVisibility()
+        Button11.Visible = StudentCB.SelectedIndex >= 0 AndAlso StudentCB.SelectedItem IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(StudentIDLBL.Text)
+    End Sub
+
     Private Async Function RefreshSelectedStudentProfilingAsync() As Task
+        Dim studentId As String = StudentIDLBL.Text?.Trim()
         Dim firstName As String = StudentFirstnameLBL.Text?.Trim()
         Dim lastName As String = StudentSurnameLBL.Text?.Trim()
+        ' Agreement / student record email (Exemplar lookup default).
         Dim email As String = StudentEmailLBL.Text?.Trim()
+        ' Prefer dbo.ExemplarProfilingStudentDB when present; otherwise use agreement email above.
+        Dim overrideEmail As String = ExemplarEmailOverrides.GetOverride(studentId)
+        Dim lookupEmail As String = If(String.IsNullOrWhiteSpace(overrideEmail), email, overrideEmail)
 
         If String.IsNullOrWhiteSpace(firstName) OrElse String.IsNullOrWhiteSpace(lastName) Then
             SetProfilingApiStatus("Waiting", "Select a student to query the profiling API.", Color.Black)
@@ -470,7 +481,7 @@ Public Class MainFrm
         End If
 
         SetProfilingApiStatus("Checking", $"{firstName} {lastName}", Color.SteelBlue)
-        Dim lookupResult As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, email)
+        Dim lookupResult As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, lookupEmail)
 
         If Not lookupResult.IsConfigured Then
             SetProfilingApiStatus("Not configured", ExemplarProfilingApi.GetNotConfiguredReason(), Color.DarkOrange)
@@ -501,6 +512,139 @@ Public Class MainFrm
             SetProfilingApiStatus(lookupResult.StatusText, lookupResult.DetailText, Color.Maroon)
         End If
     End Function
+
+    ''' <summary>Shows email editor. Returns Nothing if cancelled, otherwise trimmed text (may be empty to clear SQL override).</summary>
+    Private Function ShowExemplarProfilingEmailSaveDialog(initialEmail As String, infoMessage As String) As String
+        Using dlg As New Form()
+            dlg.Text = "Exemplar profiling email"
+            dlg.FormBorderStyle = FormBorderStyle.FixedDialog
+            dlg.StartPosition = FormStartPosition.CenterParent
+            dlg.MinimizeBox = False
+            dlg.MaximizeBox = False
+            dlg.ShowInTaskbar = False
+            dlg.ClientSize = New Size(500, 168)
+            dlg.Font = Me.Font
+
+            Dim infoLbl As New Label() With {
+                .Left = 12,
+                .Top = 12,
+                .Width = 476,
+                .Height = 56,
+                .AutoSize = False,
+                .Text = infoMessage
+            }
+
+            Dim emailTb As New TextBox() With {
+                .Left = 12,
+                .Top = 74,
+                .Width = 476,
+                .Text = If(initialEmail, "")
+            }
+
+            Dim saveBtn As New Button() With {
+                .Text = "Save",
+                .Left = 290,
+                .Top = 118,
+                .Width = 96,
+                .DialogResult = DialogResult.OK
+            }
+            Dim cancelBtn As New Button() With {
+                .Text = "Cancel",
+                .Left = 392,
+                .Top = 118,
+                .Width = 96,
+                .DialogResult = DialogResult.Cancel
+            }
+
+            dlg.Controls.Add(infoLbl)
+            dlg.Controls.Add(emailTb)
+            dlg.Controls.Add(saveBtn)
+            dlg.Controls.Add(cancelBtn)
+            dlg.AcceptButton = saveBtn
+            dlg.CancelButton = cancelBtn
+
+            If dlg.ShowDialog(Me) <> DialogResult.OK Then
+                Return Nothing
+            End If
+
+            Return emailTb.Text.Trim()
+        End Using
+    End Function
+
+    Private Async Sub Button11_Click(sender As Object, e As EventArgs) Handles Button11.Click
+        Dim studentId As String = StudentIDLBL.Text?.Trim()
+        If String.IsNullOrWhiteSpace(studentId) Then
+            MessageBox.Show("Select a student first.", "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Return
+        End If
+
+        Dim firstName As String = StudentFirstnameLBL.Text?.Trim()
+        Dim lastName As String = StudentSurnameLBL.Text?.Trim()
+        Dim agreementEmail As String = StudentEmailLBL.Text?.Trim()
+
+        If String.IsNullOrWhiteSpace(firstName) OrElse String.IsNullOrWhiteSpace(lastName) Then
+            MessageBox.Show("Student name is not loaded. Select a student from the list.", "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        If Not ExemplarProfilingApi.IsConfigured() Then
+            MessageBox.Show("Profiling API is not configured for this installation.", "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            Return
+        End If
+
+        ExemplarEmailOverrides.InvalidateCacheForStudent(studentId)
+        Dim sqlOverride As String = ExemplarEmailOverrides.GetOverride(studentId)
+        Dim lookupEmail As String = If(String.IsNullOrWhiteSpace(sqlOverride), agreementEmail, sqlOverride)
+
+        Button11.Enabled = False
+        Cursor = Cursors.WaitCursor
+        Try
+            Dim apiResult As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(firstName, lastName, lookupEmail)
+
+            If Not apiResult.IsConfigured Then
+                MessageBox.Show(apiResult.DetailText, "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Dim initialBoxText As String = ""
+            Dim infoMessage As String
+
+            If apiResult.IsSuccessful Then
+                initialBoxText = If(String.IsNullOrWhiteSpace(apiResult.MatchedUserEmail), "", apiResult.MatchedUserEmail)
+                infoMessage = "Enter Exemplar Profiling email address associated to the student." & vbCrLf &
+                    "A matching Exemplar account was found. The email below is from the API — you can change it and click Save to store an override in the database."
+            ElseIf String.Equals(apiResult.StatusText, "Student not found", StringComparison.OrdinalIgnoreCase) Then
+                initialBoxText = ""
+                infoMessage = "Enter Exemplar Profiling email address associated to the student." & vbCrLf &
+                    "No Exemplar account was found with the current lookup. Enter the email to save as an override, then click Save."
+            Else
+                MessageBox.Show(
+                    "Could not verify the student on Exemplar: " & If(String.IsNullOrWhiteSpace(apiResult.ErrorMessage), apiResult.DetailText, apiResult.ErrorMessage),
+                    "Exemplar profiling email",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Cursor = Cursors.Default
+            Dim savedEmail As String = ShowExemplarProfilingEmailSaveDialog(initialBoxText, infoMessage)
+            If savedEmail Is Nothing Then
+                Return
+            End If
+
+            ExemplarEmailOverrides.SetOverride(studentId, savedEmail)
+            Await RefreshSelectedStudentProfilingAsync()
+
+            If String.IsNullOrWhiteSpace(savedEmail) Then
+                MessageBox.Show("Override cleared. Lookups will use the agreement email unless you save a profiling email again.", "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            Else
+                MessageBox.Show("Exemplar profiling email saved for this student.", "Exemplar profiling email", MessageBoxButtons.OK, MessageBoxIcon.Information)
+            End If
+        Finally
+            Cursor = Cursors.Default
+            Button11.Enabled = True
+        End Try
+    End Sub
 
     Private Async Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         Await CheckForUpdatesAsync(showNoUpdateMessage:=True)
@@ -1128,6 +1272,7 @@ Public Class MainFrm
         End Using
     End Sub
     Private Sub BlockGroupCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles BlockGroupCB.SelectedIndexChanged
+        Button11.Visible = False
         StudentCB.Text = ""
         Label19.Text = ""
         Label22.Text = ""
@@ -1202,6 +1347,11 @@ Public Class MainFrm
         Label22.Text = ""
         Label23.Text = ""
 
+        If StudentCB.SelectedIndex < 0 OrElse StudentCB.SelectedItem Is Nothing Then
+            Button11.Visible = False
+            Return
+        End If
+
         ' Show the loading form
         Dim loadingForm As New LoadingForm()
         loadingForm.Show()
@@ -1214,6 +1364,7 @@ Public Class MainFrm
 
 
         UpdateLabels(selectedStudent)
+        ExemplarEmailOverrides.InvalidateCacheForStudent(StudentIDLBL.Text?.Trim())
 
         ' Update SelectedStudentLBL
         SelectedStudentLBL.Text = selectedStudent
@@ -2259,6 +2410,7 @@ Public Class MainFrm
                 StudentCB.Items.Clear()
                 StudentCB.Text = ""
                 StudentCB.SelectedIndex = -1 ' Clear selected value
+                Button11.Visible = False
                 MessageBox.Show("Student ID Doesn't Exist")
             End If
         Else

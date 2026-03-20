@@ -116,6 +116,7 @@ Partial Class MainFrm
         ProfilingEmployerVerifiedValLbl = New Label()
         ProfilingLastCardLbl = New Label()
         ProfilingLastCardValLbl = New Label()
+        Button11 = New Button()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -1090,6 +1091,16 @@ Partial Class MainFrm
         ProfilingLastCardValLbl.TabIndex = 104
         ProfilingLastCardValLbl.Text = "?"
         ProfilingLastCardValLbl.Visible = False
+        ' Button11
+        ' 
+        Button11.Font = New Font("Segoe UI", 9F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        Button11.Location = New Point(780, 38)
+        Button11.Name = "Button11"
+        Button11.Size = New Size(220, 30)
+        Button11.TabIndex = 97
+        Button11.Text = "Set Exemplar profiling email"
+        Button11.UseVisualStyleBackColor = True
+        Button11.Visible = False
         ' 
         ' MainFrm
         ' 
@@ -1107,6 +1118,7 @@ Partial Class MainFrm
         Controls.Add(ProfilingNotVerifiedLbl)
         Controls.Add(ProfilingMissingValLbl)
         Controls.Add(ProfilingMissingLbl)
+        Controls.Add(Button11)
         Controls.Add(Label39)
         Controls.Add(Label38)
         Controls.Add(Label37)
@@ -1293,5 +1305,6 @@ Partial Class MainFrm
     Friend WithEvents ProfilingEmployerVerifiedValLbl As Label
     Friend WithEvents ProfilingLastCardLbl As Label
     Friend WithEvents ProfilingLastCardValLbl As Label
+    Friend WithEvents Button11 As Button
 
 End Class
