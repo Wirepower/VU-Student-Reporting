@@ -1277,8 +1277,10 @@ Public Class MainFrm
 
 
     Private Sub Button9_Click(sender As Object, e As EventArgs)
-        SendOutlookEmail.SendOutlookEmail(studentID, studentFirstname, studentSurname, studentEmail, employerFirstname, employerSurname, employerBusinessName, employerEmail)
-
+        ' Kept for backward compatibility (no Handles clause). Open the exception report form.
+        Dim url As String = "https://docs.google.com/forms/d/e/1FAIpQLSf579Vp_-yKbH8w5vUYsEIyqsBelC3BIjRQWuLSVI9pXmXTJg/viewform?usp=header"
+        Dim psi As New System.Diagnostics.ProcessStartInfo(url) With {.UseShellExecute = True}
+        System.Diagnostics.Process.Start(psi)
     End Sub
 
     Private Sub Button4_Click(sender As Object, e As EventArgs) Handles Button4.Click
@@ -2504,7 +2506,9 @@ Public Class MainFrm
 
 
     Private Sub Button9_Click_1(sender As Object, e As EventArgs) Handles Button9.Click
-        BugReport.Show()
+        Dim url As String = "https://docs.google.com/forms/d/e/1FAIpQLSf579Vp_-yKbH8w5vUYsEIyqsBelC3BIjRQWuLSVI9pXmXTJg/viewform?usp=header"
+        Dim psi As New System.Diagnostics.ProcessStartInfo(url) With {.UseShellExecute = True}
+        System.Diagnostics.Process.Start(psi)
     End Sub
 
     Private Sub VersionLBL_Click(sender As Object, e As EventArgs) Handles VersionLBL.Click
