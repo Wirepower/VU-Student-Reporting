@@ -15,6 +15,7 @@ Public Class StudentUnits
     Friend Shared studentUnitsForm As New StudentUnits()
     Private ReadOnly unitCheckBoxes As New Dictionary(Of String, CheckBox)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly originalCheckBoxText As New Dictionary(Of CheckBox, String)
+    Private isRevertingUnitOverride As Boolean = False
     
 
 
@@ -68,10 +69,102 @@ Public Class StudentUnits
         SelectedStudentLBL.Text = MainFrm.SelectedStudentLBL.Text
     End Sub
 
+    Private Function PromptOverridePassword() As String
+        Using prompt As New Form()
+            prompt.Text = "Admin Override Required"
+            prompt.StartPosition = FormStartPosition.CenterParent
+            prompt.FormBorderStyle = FormBorderStyle.FixedDialog
+            prompt.MaximizeBox = False
+            prompt.MinimizeBox = False
+            prompt.ClientSize = New Size(420, 140)
+
+            Dim lbl As New Label() With {
+                .AutoSize = False,
+                .Location = New Point(12, 12),
+                .Size = New Size(396, 35),
+                .Text = "This requires ADMIN authority to override. Input Password"
+            }
+
+            Dim txt As New TextBox() With {
+                .Location = New Point(12, 55),
+                .Size = New Size(396, 24),
+                .UseSystemPasswordChar = True
+            }
+
+            Dim okBtn As New Button() With {
+                .Text = "OK",
+                .Location = New Point(252, 95),
+                .DialogResult = DialogResult.OK
+            }
+
+            Dim cancelBtn As New Button() With {
+                .Text = "Cancel",
+                .Location = New Point(333, 95),
+                .DialogResult = DialogResult.Cancel
+            }
+
+            prompt.Controls.Add(lbl)
+            prompt.Controls.Add(txt)
+            prompt.Controls.Add(okBtn)
+            prompt.Controls.Add(cancelBtn)
+            prompt.AcceptButton = okBtn
+            prompt.CancelButton = cancelBtn
+
+            Dim result As DialogResult = prompt.ShowDialog(Me)
+            If result = DialogResult.OK Then
+                Return txt.Text
+            End If
+        End Using
+
+        Return Nothing
+    End Function
+
+    Private Function EnsureAdminOverrideAuthorized(targetCheckBox As CheckBox) As Boolean
+        If targetCheckBox Is Nothing Then
+            Return False
+        End If
+
+        If isRevertingUnitOverride Then
+            Return False
+        End If
+
+        ' Programmatic SQL/UI state loads should not be blocked by the admin prompt.
+        If Not targetCheckBox.Focused Then
+            Return True
+        End If
+
+        Dim enteredPassword As String = PromptOverridePassword()
+        If enteredPassword Is Nothing Then
+            isRevertingUnitOverride = True
+            Try
+                targetCheckBox.Checked = Not targetCheckBox.Checked
+            Finally
+                isRevertingUnitOverride = False
+            End Try
+            Return False
+        End If
+
+        Dim adminPasswords() As String = {"Wpower84", "Admin123"}
+        Dim isAdmin As Boolean = adminPasswords.Any(Function(p) String.Equals(enteredPassword, p, StringComparison.Ordinal))
+        If isAdmin Then
+            Return True
+        End If
+
+        MessageBox.Show("Incorrect Password, logged in as normal user")
+        isRevertingUnitOverride = True
+        Try
+            targetCheckBox.Checked = Not targetCheckBox.Checked
+        Finally
+            isRevertingUnitOverride = False
+        End Try
+        Return False
+    End Function
+
     Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECO0023" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox1.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox1) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -83,6 +176,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0007" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox2.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox2) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -94,6 +188,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0019" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox3.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox3) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -104,6 +199,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0020" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox4.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox4) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -115,6 +211,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0051" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox5.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox5) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         CompletionChecker.LoadCheckBoxStates(MainFrm.StudentIDLBL.Text)
@@ -126,6 +223,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0046" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox6.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox6) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -137,6 +235,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0044" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox7.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox7) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -149,6 +248,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0021" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox8.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox8) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -161,6 +261,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0019" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox9.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox9) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -172,6 +273,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEERE0001" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox10.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox10) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -184,6 +286,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0023" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox11.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox11) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -196,6 +299,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0020" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox12.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox12) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -207,6 +311,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0025" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox13.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox13) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -219,6 +324,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0024" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox14.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox14) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -231,6 +337,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0008" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox15.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox15) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -240,6 +347,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0009" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox16.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox16) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -252,6 +360,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0010" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox17.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox17) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -264,6 +373,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEDV0005" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox18.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox18) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -275,6 +385,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEDV0008" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox19.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox19) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -287,6 +398,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0003" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox20.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox20) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -298,6 +410,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0018" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox21.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox21) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -310,6 +423,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0005" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox22.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox22) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -321,6 +435,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEECD0016" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox23.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox23) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -333,6 +448,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0047" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox24.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox24) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -345,6 +461,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "HLTAID009" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox25.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox25) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -356,6 +473,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UETDRRF004" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox26.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox26) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -368,6 +486,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0014" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox27.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox27) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -381,6 +500,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0012" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox28.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox28) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         CompletionChecker.UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -394,6 +514,7 @@ Public Class StudentUnits
         Dim studentID As String = MainFrm.StudentIDLBL.Text ' Replace with the actual student ID
         Dim columnName As String = "UEEEL0039" ' Replace with the corresponding column name
         Dim newValue As Boolean = CheckBox29.Checked
+        If Not EnsureAdminOverrideAuthorized(CheckBox29) Then Return
         UpdateDatabase(studentID, columnName, newValue)
         UpdateLabelsFromDatabase(studentID)
         UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
@@ -925,6 +1046,60 @@ Public Class StudentUnits
                s.Contains("PASSED")
     End Function
 
+    Private Sub SetControlVisibilityByName(controlName As String, visible As Boolean)
+        If String.IsNullOrWhiteSpace(controlName) Then
+            Return
+        End If
+
+        Dim found As Control() = Me.Controls.Find(controlName, True)
+        If found Is Nothing OrElse found.Length = 0 Then
+            Return
+        End If
+
+        found(0).Visible = visible
+    End Sub
+
+    Private Function TryGetLabel13PercentValue() As Nullable(Of Double)
+        Dim found As Control() = Me.Controls.Find("Label13", True)
+        If found Is Nothing OrElse found.Length = 0 Then
+            Return Nothing
+        End If
+
+        Dim avgLbl As Label = TryCast(found(0), Label)
+        If avgLbl Is Nothing Then
+            Return Nothing
+        End If
+
+        Return TryParsePercent(avgLbl.Text)
+    End Function
+
+    Private Sub ApplyLowAverageOverrideForCheckbox28And29()
+        Dim avgPercent As Nullable(Of Double) = TryGetLabel13PercentValue()
+        Dim isBelow85 As Boolean = avgPercent.HasValue AndAlso avgPercent.Value < 85.0
+        Dim triggeredBy28 As Boolean = CheckBox28.Checked AndAlso isBelow85
+        Dim triggeredBy29 As Boolean = CheckBox29.Checked AndAlso isBelow85
+
+        ' Toggle notice labels regardless so old state does not stick.
+        SetControlVisibilityByName("Label14", triggeredBy28)
+        SetControlVisibilityByName("Label15", triggeredBy29)
+
+        If triggeredBy28 OrElse triggeredBy29 Then
+            ' Your override: keep existing checks, then force-hide/show these controls.
+            Button1.Visible = False
+            Button2.Visible = False
+            Label2.Visible = False
+            TextBox1.Visible = False
+            ComboBox1.Visible = False
+            Label5.Visible = False
+            CheckBox40.Visible = False
+            CheckBox41.Visible = False
+            Button3.Visible = True
+        Else
+            ' Revert only controls driven by this override.
+            Button3.Visible = False
+        End If
+    End Sub
+
     Private Sub UpdateButtonVisibility()
         ' Check if all checkboxes are checked
         Dim allChecked As Boolean = True
@@ -960,11 +1135,16 @@ Public Class StudentUnits
 
         If Not String.IsNullOrEmpty(TextBox1.Text) AndAlso (CheckBox40.Checked OrElse CheckBox41.Checked) Then
             Button1.Visible = True
+            Button2.Visible = True
 
         Else
             Button1.Visible = False
+            Button2.Visible = False
 
         End If
+
+        ' Keep existing behavior above; apply extra rule for checkbox 28/29 + low average.
+        ApplyLowAverageOverrideForCheckbox28And29()
     End Sub
     ''' <summary>Collects the form field position (page + rectangle) for a stamp so we can draw the image on top after flattening.</summary>
     Private Sub CollectStampPosition(form As AcroFields, fieldName As String, outPositions As List(Of Tuple(Of Integer, Rectangle)))
@@ -1000,7 +1180,98 @@ Public Class StudentUnits
         End Try
     End Sub
 
-    Public Sub PopulatePdfWithParameters()
+    Private Sub CollectFieldPosition(form As AcroFields, fieldName As String, outPositions As List(Of Tuple(Of Integer, Rectangle)))
+        Try
+            Dim positions = form.GetFieldPositions(fieldName)
+            If positions IsNot Nothing AndAlso positions.Count > 0 Then
+                Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
+                outPositions.Add(Tuple.Create(fp.page, fp.position))
+                Return
+            End If
+        Catch
+            ' Fall through to partial-match scan.
+        End Try
+
+        Try
+            For Each key As String In form.Fields.Keys
+                If key.IndexOf(fieldName, StringComparison.OrdinalIgnoreCase) >= 0 Then
+                    Dim positions = form.GetFieldPositions(key)
+                    If positions IsNot Nothing AndAlso positions.Count > 0 Then
+                        Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
+                        outPositions.Add(Tuple.Create(fp.page, fp.position))
+                        Return
+                    End If
+                End If
+            Next
+        Catch
+            ' Ignore position lookup errors.
+        End Try
+    End Sub
+
+    Private Function PromptForImageFile(dialogTitle As String) As String
+        Using ofd As New OpenFileDialog()
+            ofd.Title = dialogTitle
+            ofd.Filter = "Image Files|*.png;*.jpg;*.jpeg;*.bmp;*.gif|All Files|*.*"
+            ofd.Multiselect = False
+            If ofd.ShowDialog() = DialogResult.OK Then
+                Return ofd.FileName
+            End If
+        End Using
+        Return ""
+    End Function
+
+    Private Function GetVuStampPath(templatePath As String) As String
+        ' Fixed asset: app should always use VU Stamp image from app/project roots.
+        Dim candidates As New List(Of String)()
+        Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
+        Dim rootTemplateDir As String = If(String.IsNullOrWhiteSpace(templatePath), "", System.IO.Path.GetDirectoryName(templatePath))
+
+        candidates.Add(System.IO.Path.Combine(baseDir, "VU Stamp.png"))
+        candidates.Add(System.IO.Path.Combine(baseDir, "VU Stamp.jpg"))
+
+        Dim parent As String = System.IO.Path.GetDirectoryName(baseDir.TrimEnd(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar))
+        For i As Integer = 0 To 5
+            If String.IsNullOrWhiteSpace(parent) Then Exit For
+            candidates.Add(System.IO.Path.Combine(parent, "VU Stamp.png"))
+            candidates.Add(System.IO.Path.Combine(parent, "VU Stamp.jpg"))
+            parent = System.IO.Path.GetDirectoryName(parent)
+        Next
+
+        If Not String.IsNullOrWhiteSpace(rootTemplateDir) Then
+            candidates.Add(System.IO.Path.Combine(rootTemplateDir, "VU Stamp.png"))
+            candidates.Add(System.IO.Path.Combine(rootTemplateDir, "VU Stamp.jpg"))
+        End If
+
+        For Each path As String In candidates
+            If Not String.IsNullOrWhiteSpace(path) AndAlso File.Exists(path) Then
+                Return path
+            End If
+        Next
+
+        Return ""
+    End Function
+
+    Private Sub AddImageToPositions(stamper As PdfStamper, imagePath As String, positions As List(Of Tuple(Of Integer, Rectangle)))
+        If String.IsNullOrWhiteSpace(imagePath) OrElse Not File.Exists(imagePath) Then
+            Return
+        End If
+        If positions Is Nothing OrElse positions.Count = 0 Then
+            Return
+        End If
+
+        For Each pos In positions
+            Dim img As Image = Image.GetInstance(imagePath)
+            Dim pageNum As Integer = pos.Item1
+            Dim rect As Rectangle = pos.Item2
+            img.ScaleToFit(rect.Width, rect.Height)
+            img.SetAbsolutePosition(rect.Left + (rect.Width - img.ScaledWidth) / 2,
+                                    rect.Bottom + (rect.Height - img.ScaledHeight) / 2)
+            stamper.GetOverContent(pageNum).AddImage(img)
+        Next
+    End Sub
+
+    Public Function PopulatePdfWithParameters(Optional openGeneratedPdf As Boolean = True,
+                                              Optional openArchiveFolder As Boolean = True) As String
         Dim templatePath As String = "LEATemplate.pdf"
         Dim outputDirectory As String = "P:\VUPoly\MT&T\IT, Electrical And Engineering\Submitted LEA Authorisation Forms"
         Dim Todaydate As String = DateTime.Today.ToString("ddMMyyyy")
@@ -1048,81 +1319,173 @@ Public Class StudentUnits
             End Using
 
             ' Pass 2: get stamp positions from original, then add stamp images on top of flattened PDF
-            Dim stampPath As String = System.IO.Path.Combine(Application.StartupPath, "VU Stamp.png")
-            If Not File.Exists(stampPath) Then stampPath = System.IO.Path.Combine(Application.StartupPath, "VU Stamp.jpg")
-            If Not File.Exists(stampPath) Then stampPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(templatePath), "VU Stamp.png")
-            If Not File.Exists(stampPath) Then stampPath = System.IO.Path.Combine(System.IO.Path.GetDirectoryName(templatePath), "VU Stamp.jpg")
+            Dim stampPath As String = GetVuStampPath(templatePath)
+
+            Dim signaturePath As String = ""
+            If CheckBox40.Checked OrElse CheckBox41.Checked Then
+                signaturePath = PromptForImageFile("Select signature image (used for Signature and Signature_2)")
+            End If
 
             Dim stampPositions As New List(Of Tuple(Of Integer, Rectangle))
+            Dim signature1Positions As New List(Of Tuple(Of Integer, Rectangle))
+            Dim signature2Positions As New List(Of Tuple(Of Integer, Rectangle))
             Using readerForPos As New PdfReader(templatePath)
                 Using stamperPos As New PdfStamper(readerForPos, New MemoryStream())
                     Dim formPos As AcroFields = stamperPos.AcroFields
                     If CheckBox40.Checked Then CollectStampPosition(formPos, "Stamp1", stampPositions)
                     If CheckBox41.Checked Then CollectStampPosition(formPos, "Stamp2", stampPositions)
+                    If CheckBox40.Checked Then CollectFieldPosition(formPos, "Signature", signature1Positions)
+                    If CheckBox41.Checked Then CollectFieldPosition(formPos, "Signature_2", signature2Positions)
                 End Using
             End Using
 
             Using readerFlattened As New PdfReader(flattenedBytes)
                 Using stamper2 As New PdfStamper(readerFlattened, New FileStream(outputPath, FileMode.Create))
-                    If File.Exists(stampPath) AndAlso stampPositions.Count > 0 Then
-                        For Each pos In stampPositions
-                            Dim img As Image = Image.GetInstance(stampPath)
-                            Dim pageNum As Integer = pos.Item1
-                            Dim rect As Rectangle = pos.Item2
-                            img.ScaleToFit(rect.Width, rect.Height)
-                            img.SetAbsolutePosition(rect.Left + (rect.Width - img.ScaledWidth) / 2, rect.Bottom + (rect.Height - img.ScaledHeight) / 2)
-                            stamper2.GetOverContent(pageNum).AddImage(img)
-                        Next
-                    End If
+                    AddImageToPositions(stamper2, stampPath, stampPositions)
+                    AddImageToPositions(stamper2, signaturePath, signature1Positions)
+                    AddImageToPositions(stamper2, signaturePath, signature2Positions)
                 End Using
             End Using
-            PdfHelper.OpenPdfWithDefaultViewer(outputPath)
+
+            If openGeneratedPdf Then
+                PdfHelper.OpenPdfWithDefaultViewer(outputPath)
+            End If
         Catch ex As Exception
             MessageBox.Show("An error occurred: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
-        End Try
-        ' Specify the path to the folder you want to open
-        Dim folderPath As String = "P:\VUPoly\MT&T\IT, Electrical and Engineering\Submitted LEA Authorisation Forms\ARCHIVE\"
-
-        Try
-            ' Open the folder using the default file explorer with the specified folder path
-
-            Process.Start("explorer.exe", $"/select,""{folderPath}""")
-        Catch ex As Exception
-            ' Handle any errors that may occur
-            MessageBox.Show("Error opening folder: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            Return ""
         End Try
 
-    End Sub
+        If openArchiveFolder Then
+            ' Specify the path to the folder you want to open
+            Dim folderPath As String = "P:\VUPoly\MT&T\IT, Electrical and Engineering\Submitted LEA Authorisation Forms\ARCHIVE\"
+
+            Try
+                ' Open the folder using the default file explorer with the specified folder path
+                Process.Start("explorer.exe", $"/select,""{folderPath}""")
+            Catch ex As Exception
+                ' Handle any errors that may occur
+                MessageBox.Show("Error opening folder: " & ex.Message, "Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            End Try
+        End If
+
+        Return outputPath
+    End Function
 
     Private Sub TextBox1_TextChanged(sender As Object, e As EventArgs) Handles TextBox1.TextChanged
         If Not String.IsNullOrEmpty(TextBox1.Text) AndAlso (CheckBox40.Checked OrElse CheckBox41.Checked) Then
             Button1.Visible = True
+            Button2.Visible = True
         Else
             Button1.Visible = False
+            Button2.Visible = False
         End If
     End Sub
 
-    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        Dim response As String
+    Private Async Function ConfirmProfilingIfStudentNotFoundAsync() As Task(Of Boolean)
+        Dim shouldPrompt As Boolean = False
+        If ExemplarProfilingApi.IsConfigured() Then
+            Try
+                Dim lookup As ExemplarProfileLookupResult = Await ExemplarProfilingApi.LookupStudentProfileAsync(
+                    MainFrm.StudentFirstnameLBL.Text,
+                    MainFrm.StudentSurnameLBL.Text,
+                    MainFrm.StudentEmailLBL.Text
+                )
+                If lookup IsNot Nothing AndAlso Not lookup.IsSuccessful Then
+                    Dim statusText As String = If(lookup.StatusText, "")
+                    Dim detailText As String = If(lookup.DetailText, "")
+                    If statusText.IndexOf("Student not found", StringComparison.OrdinalIgnoreCase) >= 0 OrElse
+                       detailText.IndexOf("No matching Exemplar student was found", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                        shouldPrompt = True
+                    End If
+                End If
+            Catch
+                ' If lookup fails unexpectedly, keep existing workflow.
+            End Try
+        End If
 
-        ' Prompt the user
-        response = MessageBox.Show("Is the student's profiling up to date?", "Profile Check", MessageBoxButtons.YesNo)
+        If Not shouldPrompt Then
+            Return True
+        End If
 
-        ' Check the response
-        If response = DialogResult.Yes Then
-            ' Call the function to populate PDF with parameters
-            PopulatePdfWithParameters()
-            'MessageBox.Show("Student profile is up to date. Proceeding with code...", "Profile Status")
-        ElseIf response = DialogResult.No Then
-            ' Prompt the user
+        Dim response As DialogResult = MessageBox.Show(
+            "Student not found on Profiling API. Is the student's profiling up to date?",
+            "Profile Check",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question
+        )
+        If response <> DialogResult.Yes Then
             MessageBox.Show("Student needs to be up to date with profiling before an LEA Authority Form can be generated", "Profile Status")
-            ' Exit the subroutine
+            Return False
+        End If
+
+        Return True
+    End Function
+
+    Private Sub CreateOutlookDraft(toAddress As String, subjectText As String, bodyText As String, Optional attachmentPath As String = "")
+        Try
+            ' Match the existing working approach used elsewhere in the app.
+            Dim OutApp As Object = CreateObject("Outlook.Application")
+            Dim OutMail As Object = OutApp.CreateItem(0) ' olMailItem
+
+            With OutMail
+                .To = toAddress
+                .CC = "electrotechnology.admin@vu.edu.au"
+                .Subject = subjectText
+                .Body = bodyText
+                If Not String.IsNullOrWhiteSpace(attachmentPath) AndAlso File.Exists(attachmentPath) Then
+                    .Attachments.Add(attachmentPath)
+                End If
+                .Display()
+            End With
+
+            OutMail = Nothing
+            OutApp = Nothing
+        Catch ex As Exception
+            MessageBox.Show("Unable to create Outlook email draft: " & ex.Message, "Email Error", MessageBoxButtons.OK, MessageBoxIcon.Error)
+        End Try
+    End Sub
+
+    Private Async Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+        If Not Await ConfirmProfilingIfStudentNotFoundAsync() Then
             Exit Sub
         End If
 
+        PopulatePdfWithParameters()
+    End Sub
 
+    Private Async Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        If Not Await ConfirmProfilingIfStudentNotFoundAsync() Then
+            Exit Sub
+        End If
 
-        'PopulatePdfWithParameters()
+        Dim pdfPath As String = PopulatePdfWithParameters()
+        If String.IsNullOrWhiteSpace(pdfPath) Then
+            Return
+        End If
+
+        Dim studentName As String = (MainFrm.StudentFirstnameLBL.Text & " " & MainFrm.StudentSurnameLBL.Text).Trim()
+        Dim subjectText As String = "Congratulations - LEA Authorisation Form"
+        Dim bodyText As String =
+            "Hi " & studentName & "," & Environment.NewLine & Environment.NewLine &
+            "Congratulations. Please find attached your completed LEA Authorisation Form." & Environment.NewLine & Environment.NewLine &
+            "Kind regards," & Environment.NewLine &
+            "Electrotechnology Administration"
+
+        CreateOutlookDraft(MainFrm.StudentEmailLBL.Text, subjectText, bodyText, pdfPath)
+    End Sub
+
+    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
+        Dim studentName As String = (MainFrm.StudentFirstnameLBL.Text & " " & MainFrm.StudentSurnameLBL.Text).Trim()
+        Dim subjectText As String = "Profiling Outcome - Insufficient Cards"
+        Dim bodyText As String =
+            "Hi " & studentName & "," & Environment.NewLine & Environment.NewLine &
+            "Your profiling cards currently do not meet the required thresholds for progression." & Environment.NewLine &
+            "Requirement: 85% / 100% (system allows 99% where applicable)." & Environment.NewLine & Environment.NewLine &
+            "Please continue submitting profiling cards and contact us if you need assistance." & Environment.NewLine & Environment.NewLine &
+            "Kind regards," & Environment.NewLine &
+            "Electrotechnology Administration"
+
+        CreateOutlookDraft(MainFrm.StudentEmailLBL.Text, subjectText, bodyText)
     End Sub
 
     Private Sub CheckBox40_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox40.CheckedChanged
@@ -1130,13 +1493,10 @@ Public Class StudentUnits
     End Sub
 
     Private Sub CheckBox41_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox41.CheckedChanged
-
-
         UpdateButtonVisibility()
     End Sub
 
     Private Sub ComboBox1_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ComboBox1.SelectedIndexChanged
-
     End Sub
 
     Private Async Sub RefreshProfilingBtn_Click(sender As Object, e As EventArgs) Handles RefreshProfilingBtn.Click
