@@ -117,6 +117,7 @@ Partial Class MainFrm
         ProfilingLastCardLbl = New Label()
         ProfilingLastCardValLbl = New Label()
         Button11 = New Button()
+        Button12 = New Button()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -161,6 +162,7 @@ Partial Class MainFrm
         Button3.TabIndex = 3
         Button3.Text = "Student Amendment Request"
         Button3.UseVisualStyleBackColor = True
+        Button3.Visible = False
         ' 
         ' BlockGroupCB
         ' 
@@ -620,7 +622,7 @@ Partial Class MainFrm
         ' 
         ' Button10
         ' 
-        Button10.Location = New Point(1103, 250)
+        Button10.Location = New Point(1103, 238)
         Button10.Name = "Button10"
         Button10.Size = New Size(170, 51)
         Button10.TabIndex = 55
@@ -1103,6 +1105,15 @@ Partial Class MainFrm
         Button11.UseVisualStyleBackColor = True
         Button11.Visible = False
         ' 
+        ' Button12
+        ' 
+        Button12.Location = New Point(1103, 306)
+        Button12.Name = "Button12"
+        Button12.Size = New Size(170, 53)
+        Button12.TabIndex = 105
+        Button12.Text = "Student Re-Allocation Request"
+        Button12.UseVisualStyleBackColor = True
+        ' 
         ' MainFrm
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -1110,6 +1121,7 @@ Partial Class MainFrm
         AutoScroll = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
+        Controls.Add(Button12)
         Controls.Add(ProfilingLastCardValLbl)
         Controls.Add(ProfilingLastCardLbl)
         Controls.Add(ProfilingEmployerVerifiedValLbl)
@@ -1306,5 +1318,6 @@ Partial Class MainFrm
     Friend WithEvents ProfilingLastCardLbl As Label
     Friend WithEvents ProfilingLastCardValLbl As Label
     Friend WithEvents Button11 As Button
+    Friend WithEvents Button12 As Button
 
 End Class

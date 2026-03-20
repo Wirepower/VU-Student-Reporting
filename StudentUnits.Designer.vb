@@ -1331,11 +1331,12 @@ Partial Class StudentUnits
         ' Label13
         ' 
         Label13.AutoSize = True
-        Label13.Location = New Point(199, 889)
+        Label13.Location = New Point(58, 779)
         Label13.Name = "Label13"
         Label13.Size = New Size(50, 15)
         Label13.TabIndex = 264
         Label13.Text = "Average"
+        Label13.Visible = False
         ' 
         ' Button2
         ' 

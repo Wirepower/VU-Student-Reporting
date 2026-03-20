@@ -164,6 +164,8 @@ Public Class MainFrm
             connectionCheckTimer.Interval = 1000 ' 1 second interval
             connectionCheckTimer.Start()
             UpdateReconnectButtonVisibility()
+            ' Hide until a student is selected.
+            Button12.Visible = False
             ' Show the loading form
 
             ' Populate the ComboBox with unique values from the "Block Group Code" column
@@ -503,6 +505,11 @@ Public Class MainFrm
         Button11.Visible = StudentCB.SelectedIndex >= 0 AndAlso StudentCB.SelectedItem IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(StudentIDLBL.Text)
     End Sub
 
+    Private Sub UpdateStudentReallocationButtonVisibility()
+        ' Only show when a student is selected and SQL labels have been populated.
+        Button12.Visible = StudentCB.SelectedIndex >= 0 AndAlso StudentCB.SelectedItem IsNot Nothing AndAlso Not String.IsNullOrWhiteSpace(StudentIDLBL.Text)
+    End Sub
+
     Private Async Function RefreshSelectedStudentProfilingAsync() As Task
         Dim studentId As String = StudentIDLBL.Text?.Trim()
         Dim firstName As String = StudentFirstnameLBL.Text?.Trim()
@@ -693,6 +700,23 @@ Public Class MainFrm
         Finally
             Cursor = Cursors.Default
             Button11.Enabled = True
+        End Try
+    End Sub
+
+    Private Sub Button12_Click(sender As Object, e As EventArgs) Handles Button12.Click
+        Try
+            If StudentCB.SelectedIndex < 0 OrElse StudentCB.SelectedItem Is Nothing OrElse String.IsNullOrWhiteSpace(StudentIDLBL.Text) Then
+                MessageBox.Show("Select a student first.", "Student Re-Allocation Request", MessageBoxButtons.OK, MessageBoxIcon.Information)
+                Return
+            End If
+
+            Dim url As String = "https://forms.office.com/Pages/ResponsePage.aspx?id=Q6Mb1ViSpk6ZB0JtjITsErOyfUeCKqpCob_102aaYL5UMlNIRUs3UFZQSDRaUEZIUTJEMzcxNElFMS4u"
+            Dim psi As New System.Diagnostics.ProcessStartInfo(url) With {
+                .UseShellExecute = True
+            }
+            System.Diagnostics.Process.Start(psi)
+        Catch ex As System.Exception
+            MessageBox.Show("Could not open the form link." & vbCrLf & ex.Message, "Student Re-Allocation Request", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
 
@@ -1323,6 +1347,7 @@ Public Class MainFrm
     End Sub
     Private Sub BlockGroupCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles BlockGroupCB.SelectedIndexChanged
         Button11.Visible = False
+        Button12.Visible = False
         StudentCB.Text = ""
         Label19.Text = ""
         Label22.Text = ""
@@ -1399,6 +1424,7 @@ Public Class MainFrm
 
         If StudentCB.SelectedIndex < 0 OrElse StudentCB.SelectedItem Is Nothing Then
             Button11.Visible = False
+            Button12.Visible = False
             Return
         End If
 
@@ -1415,6 +1441,7 @@ Public Class MainFrm
 
         UpdateLabels(selectedStudent)
         UpdateExemplarProfilingEmailButtonVisibility()
+        UpdateStudentReallocationButtonVisibility()
         ExemplarEmailOverrides.InvalidateCacheForStudent(StudentIDLBL.Text?.Trim())
 
         ' Update SelectedStudentLBL
