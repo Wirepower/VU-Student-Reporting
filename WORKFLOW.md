@@ -1,4 +1,4 @@
-# Branch Workflow Guide (VS 2022 + Terminal)
+# Branch Workflow Guide (VS 2026 + Terminal)
 
 This guide is for your current branch model:
 
@@ -15,7 +15,7 @@ This guide is for your current branch model:
 
 ## 1) Start of each coding session (always do this)
 
-### Visual Studio 2022 (GUI)
+### Visual Studio 2026 (GUI)
 1. Open **View > Git Repository**.
 2. Checkout `master`.
 3. Pull latest (`master`).
@@ -38,7 +38,7 @@ git merge master
 
 ## 2) While coding
 
-### Visual Studio 2022 (GUI)
+### Visual Studio 2026 (GUI)
 1. Make small changes.
 2. Build frequently.
 3. Open **Git Changes**.
@@ -55,7 +55,7 @@ git commit -m "Clear descriptive message"
 
 ## 3) Push your branch
 
-### Visual Studio 2022 (GUI)
+### Visual Studio 2026 (GUI)
 - In **Git Changes**, click **Push**.
 
 ### Terminal
@@ -84,7 +84,7 @@ git push -u origin master
 
 ## 5) Handling merge conflicts
 
-### Visual Studio 2022 (GUI)
+### Visual Studio 2026 (GUI)
 1. Open conflict editor.
 2. Choose current/incoming/both carefully.
 3. Mark resolved.
