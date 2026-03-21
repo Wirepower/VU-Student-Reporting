@@ -19,6 +19,10 @@ Public Class StudentUnits
     Private ReadOnly originalCheckBoxText As New Dictionary(Of CheckBox, String)
     Private isRevertingUnitOverride As Boolean = False
     Private lastUnitProgressResult As ExemplarUnitProgressResult = Nothing
+    Private hasLoadedStudentProfiling As Boolean = False
+    Private autoProfilingRetryAttempted As Boolean = False
+    Private postShowAutoAttemptDone As Boolean = False
+    Private profilingLoadInProgress As Boolean = False
 
 
 
@@ -584,34 +588,171 @@ Public Class StudentUnits
 
         ' Auto-load per-unit profiling percentages when the form opens.
         If ExemplarProfilingApi.IsConfigured() AndAlso unitCheckBoxes.Count > 0 Then
-            Try
-                Cursor = Cursors.WaitCursor
-                Dim result As ExemplarUnitProgressResult = Await ExemplarProfilingApi.GetStudentUnitProgressAsync(
-                    MainFrm.StudentFirstnameLBL.Text,
-                    MainFrm.StudentSurnameLBL.Text,
-                    MainFrm.StudentEmailLBL.Text,
-                    "",
-                    unitCheckBoxes.Keys,
-                    New String() {
-                        "acab955d-09f4-4d04-ae6e-a6dc463a1e48",
-                        "f7e89709-7528-446b-a71f-3cecbbd911b2"
-                    }
-                )
+            hasLoadedStudentProfiling = False
+            autoProfilingRetryAttempted = False
+            postShowAutoAttemptDone = False
 
-                If result IsNot Nothing AndAlso result.IsSuccessful Then
-                    ApplyUnitProfilingAnnotations(result)
-                    SetProfilingSummary("Profiling percentages loaded.", Color.DarkGreen)
-                Else
-                    SetProfilingSummary("Student qualification request failed: " &
-                                         If(result IsNot Nothing, result.ErrorMessage, "Unknown error"), Color.Maroon)
+            Await WaitForStudentIdentityReadyAsync()
+
+            ' Match reopen behavior more closely: refresh override cache even on first automatic attempt.
+            Dim firstLoadTask As Task = LoadStudentProfilingAsync(forceCacheRefresh:=True)
+            Dim completed As Task = Await Task.WhenAny(firstLoadTask, Task.Delay(10000))
+            If completed Is firstLoadTask Then
+                Await firstLoadTask
+            ElseIf Not hasLoadedStudentProfiling AndAlso Not autoProfilingRetryAttempted Then
+                autoProfilingRetryAttempted = True
+                SetProfilingSummary("Initial profiling load timed out. Retrying once...", Color.DarkOrange)
+                ' Retry path mirrors Refresh button behavior by invalidating the override cache first.
+                Await LoadStudentProfilingAsync(forceCacheRefresh:=True)
+                If Not hasLoadedStudentProfiling Then
+                    LogProfilingAvailabilityIssue("Auto-load retry did not complete.")
+                    SetProfilingSummary("Profiling API currently unavailable. Using current checkbox/SQL state only.", Color.Maroon)
                 End If
-            Catch ex As Exception
-                SetProfilingSummary("Student qualification request failed: " & ex.Message, Color.Maroon)
-            Finally
-                Cursor = Cursors.Default
-            End Try
+            End If
         End If
 
+    End Sub
+
+    Private Async Sub StudentUnits_Shown(sender As Object, e As EventArgs) Handles MyBase.Shown
+        If postShowAutoAttemptDone Then
+            Return
+        End If
+        postShowAutoAttemptDone = True
+
+        If hasLoadedStudentProfiling Then
+            Return
+        End If
+        If Not ExemplarProfilingApi.IsConfigured() OrElse unitCheckBoxes.Count = 0 Then
+            Return
+        End If
+
+        ' Finite post-open attempts to cover timing delays without requiring close/reopen.
+        For attempt As Integer = 1 To 3
+            If attempt = 1 Then
+                Await Task.Delay(1200)
+            Else
+                Await Task.Delay(2500)
+            End If
+
+            Await WaitForProfilingLoadIdleAsync()
+            If hasLoadedStudentProfiling Then
+                Exit For
+            End If
+
+            Await WaitForStudentIdentityReadyAsync()
+            SetProfilingSummary("Performing post-open profiling attempt " &
+                                attempt.ToString(CultureInfo.InvariantCulture) & " of 3...", Color.DarkOrange)
+            Await LoadStudentProfilingAsync(forceCacheRefresh:=True)
+            If hasLoadedStudentProfiling Then
+                Exit For
+            End If
+        Next
+
+        If Not hasLoadedStudentProfiling Then
+            LogProfilingAvailabilityIssue("Post-open profiling attempts (3) did not complete.")
+            SetProfilingSummary("Profiling API currently unavailable. Using current checkbox/SQL state only.", Color.Maroon)
+        End If
+    End Sub
+
+    Private Async Function WaitForProfilingLoadIdleAsync(Optional timeoutMs As Integer = 15000) As Task
+        Dim start As DateTime = DateTime.UtcNow
+        Do While profilingLoadInProgress
+            If (DateTime.UtcNow - start).TotalMilliseconds >= timeoutMs Then
+                Exit Do
+            End If
+            Await Task.Delay(150)
+        Loop
+    End Function
+
+    Private Async Function WaitForStudentIdentityReadyAsync() As Task
+        ' Allow a short window for MainFrm labels/bindings to settle before first API call.
+        Dim start As DateTime = DateTime.UtcNow
+        Do While (DateTime.UtcNow - start).TotalMilliseconds < 3000
+            Dim studentIdReady As Boolean = Not String.IsNullOrWhiteSpace(MainFrm.StudentIDLBL.Text)
+            Dim firstReady As Boolean = Not String.IsNullOrWhiteSpace(MainFrm.StudentFirstnameLBL.Text)
+            Dim lastReady As Boolean = Not String.IsNullOrWhiteSpace(MainFrm.StudentSurnameLBL.Text)
+            Dim emailReady As Boolean = Not String.IsNullOrWhiteSpace(MainFrm.StudentEmailLBL.Text)
+
+            If studentIdReady AndAlso firstReady AndAlso lastReady AndAlso emailReady Then
+                Exit Do
+            End If
+
+            Await Task.Delay(150)
+        Loop
+    End Function
+
+    Private Async Function LoadStudentProfilingAsync(Optional forceCacheRefresh As Boolean = False) As Task
+        If profilingLoadInProgress Then
+            Return
+        End If
+
+        profilingLoadInProgress = True
+        Try
+            Cursor = Cursors.WaitCursor
+            Dim studentId As String = MainFrm.StudentIDLBL.Text?.Trim()
+            Dim firstName As String = MainFrm.StudentFirstnameLBL.Text?.Trim()
+            Dim lastName As String = MainFrm.StudentSurnameLBL.Text?.Trim()
+            Dim agreementEmail As String = MainFrm.StudentEmailLBL.Text?.Trim()
+            If forceCacheRefresh Then
+                ExemplarEmailOverrides.InvalidateCacheForStudent(studentId)
+            End If
+            Dim overrideEmail As String = ExemplarEmailOverrides.GetOverride(studentId)
+            Dim lookupEmail As String = If(String.IsNullOrWhiteSpace(overrideEmail), agreementEmail, overrideEmail)
+
+            Dim apiTask As Task(Of ExemplarUnitProgressResult) = ExemplarProfilingApi.GetStudentUnitProgressAsync(
+                firstName,
+                lastName,
+                lookupEmail,
+                "",
+                unitCheckBoxes.Keys,
+                New String() {
+                    "acab955d-09f4-4d04-ae6e-a6dc463a1e48",
+                    "f7e89709-7528-446b-a71f-3cecbbd911b2"
+                }
+            )
+            Dim completed As Task = Await Task.WhenAny(apiTask, Task.Delay(12000))
+            If completed IsNot apiTask Then
+                hasLoadedStudentProfiling = False
+                LogProfilingAvailabilityIssue("Student qualification request timed out after 12 seconds.")
+                SetProfilingSummary("Student qualification request timed out. Retrying automatically...", Color.DarkOrange)
+                Return
+            End If
+
+            Dim result As ExemplarUnitProgressResult = Await apiTask
+
+            If result IsNot Nothing AndAlso result.IsSuccessful Then
+                ApplyUnitProfilingAnnotations(result)
+                hasLoadedStudentProfiling = True
+                SetProfilingSummary("Profiling percentages loaded.", Color.DarkGreen)
+            Else
+                hasLoadedStudentProfiling = False
+                LogProfilingAvailabilityIssue("Student qualification request failed: " &
+                                              If(result IsNot Nothing, result.ErrorMessage, "Unknown error"))
+                SetProfilingSummary("Student qualification request failed: " &
+                                    If(result IsNot Nothing, result.ErrorMessage, "Unknown error"), Color.Maroon)
+            End If
+        Catch ex As Exception
+            hasLoadedStudentProfiling = False
+            LogProfilingAvailabilityIssue("Student qualification request exception: " & ex.Message)
+            SetProfilingSummary("Student qualification request failed: " & ex.Message, Color.Maroon)
+        Finally
+            profilingLoadInProgress = False
+            Cursor = Cursors.Default
+            ' Re-evaluate Button3 / LEA controls after profiling (or after failed load + N/A averages).
+            UpdateButtonVisibility()
+        End Try
+    End Function
+
+    Private Sub LogProfilingAvailabilityIssue(message As String)
+        Try
+            Dim logPath As String = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "ExemplarProfilingAvailability.log")
+            Dim line As String = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture) &
+                                 " | StudentID=" & MainFrm.StudentIDLBL.Text &
+                                 " | " & message
+            File.AppendAllText(logPath, line & Environment.NewLine, Encoding.UTF8)
+        Catch
+            ' Logging should never interrupt user flow.
+        End Try
     End Sub
 
 
@@ -739,6 +880,31 @@ Public Class StudentUnits
         Public Property ExceptionReport As String
     End Class
 
+    ''' <summary>Strip all Unicode whitespace (incl. NBSP) for robust SQL vs app matching.</summary>
+    Private Shared Function NormalizeUnitCodeForSqlMatch(code As String) As String
+        If String.IsNullOrWhiteSpace(code) Then
+            Return ""
+        End If
+        Dim sb As New StringBuilder()
+        For Each ch As Char In code.Trim()
+            If Not Char.IsWhiteSpace(ch) Then
+                sb.Append(ch)
+            End If
+        Next
+        Return sb.ToString().ToUpperInvariant()
+    End Function
+
+    ''' <summary>Alternate normalised keys sometimes stored in SQL (typos / legacy rows).</summary>
+    Private Shared Function GetAlternateSqlUnitCodeNorms(canonicalNorm As String) As String()
+        Select Case canonicalNorm
+            Case "UEEEL0039"
+                ' App / national code is UEEEL0039; some DB rows use UEEL0039 (missing an E).
+                Return New String() {"UEEL0039"}
+            Case Else
+                Return Array.Empty(Of String)()
+        End Select
+    End Function
+
     Private Function ExtractUnitTitle(text As String) As String
         If String.IsNullOrWhiteSpace(text) Then
             Return ""
@@ -823,38 +989,29 @@ Public Class StudentUnits
             Return mappings
         End If
 
-        Dim parameterNames As New List(Of String)()
-        For i As Integer = 0 To unitCodes.Count - 1
-            parameterNames.Add("@u" & i.ToString(CultureInfo.InvariantCulture))
-        Next
-
-        Dim query As String =
-            "SELECT Unit_Code, Unit_Title, ExceptionReport " &
+        ' Load all rows once: small reference table; avoids IN-list / padding / typo edge cases.
+        Const query As String =
+            "SELECT CAST(Unit_Code AS NVARCHAR(200)) AS Unit_Code, Unit_Title, ExceptionReport " &
             "FROM ElectrotechnologyReports.dbo.UEE30820units " &
-            "WHERE Unit_Code IN (" & String.Join(", ", parameterNames) & ")"
+            "WHERE Unit_Code IS NOT NULL"
+
+        Dim dbByNorm As New Dictionary(Of String, UnitExceptionMapping)(StringComparer.OrdinalIgnoreCase)
 
         Using sqlConnection As New SqlConnection(SQLCon.connectionString)
             Using command As New SqlCommand(query, sqlConnection)
-                For i As Integer = 0 To unitCodes.Count - 1
-                    command.Parameters.AddWithValue(parameterNames(i), unitCodes(i))
-                Next
-
                 sqlConnection.Open()
                 Using reader As SqlDataReader = command.ExecuteReader()
                     While reader.Read()
-                        Dim code As String = If(reader("Unit_Code"), "").ToString().Trim().ToUpperInvariant()
-                        If String.IsNullOrWhiteSpace(code) Then
+                        Dim rawCode As String = If(reader("Unit_Code"), "").ToString()
+                        Dim normKey As String = NormalizeUnitCodeForSqlMatch(rawCode)
+                        If String.IsNullOrWhiteSpace(normKey) Then
                             Continue While
                         End If
 
                         Dim title As String = If(reader("Unit_Title"), "").ToString().Trim()
                         Dim exceptionText As String = If(reader("ExceptionReport"), "").ToString().Trim()
 
-                        If String.IsNullOrWhiteSpace(exceptionText) Then
-                            Continue While
-                        End If
-
-                        mappings(code) = New UnitExceptionMapping With {
+                        dbByNorm(normKey) = New UnitExceptionMapping With {
                             .UnitTitle = title,
                             .ExceptionReport = exceptionText
                         }
@@ -864,9 +1021,33 @@ Public Class StudentUnits
         End Using
 
         For Each code As String In unitCodes
-            If Not mappings.ContainsKey(code) Then
+            Dim appNorm As String = NormalizeUnitCodeForSqlMatch(code)
+            If String.IsNullOrWhiteSpace(appNorm) Then
                 missingCodes.Add(code)
+                Continue For
             End If
+
+            Dim row As UnitExceptionMapping = Nothing
+
+            If Not dbByNorm.TryGetValue(appNorm, row) Then
+                For Each alt As String In GetAlternateSqlUnitCodeNorms(appNorm)
+                    If dbByNorm.TryGetValue(alt, row) Then
+                        Exit For
+                    End If
+                Next
+            End If
+
+            If row Is Nothing Then
+                missingCodes.Add(code)
+                Continue For
+            End If
+
+            If String.IsNullOrWhiteSpace(row.ExceptionReport) Then
+                missingCodes.Add(code)
+                Continue For
+            End If
+
+            mappings(code) = row
         Next
 
         Return mappings
@@ -1027,6 +1208,7 @@ Public Class StudentUnits
         Next
 
         UpdateAveragePercentageLabel()
+        UpdateButtonVisibility()
     End Sub
 
     Private Sub WriteProfilingDebugDump(rawJson As String)
@@ -1260,26 +1442,31 @@ Public Class StudentUnits
     Private Sub ApplyLowAverageOverrideForCheckbox28And29()
         Dim avgPercent As Nullable(Of Double) = TryGetLabel13PercentValue()
         Dim isBelow85 As Boolean = avgPercent.HasValue AndAlso avgPercent.Value < 85.0
+        Dim isBelow100 As Boolean = avgPercent.HasValue AndAlso avgPercent.Value < 100.0
         Dim triggeredBy28 As Boolean = CheckBox28.Checked AndAlso isBelow85
-        Dim triggeredBy29 As Boolean = CheckBox29.Checked AndAlso isBelow85
+        Dim triggeredBy29 As Boolean = CheckBox29.Checked AndAlso isBelow100
 
-        ' Toggle notice labels regardless so old state does not stick.
-        SetControlVisibilityByName("Label14", triggeredBy28)
-        SetControlVisibilityByName("Label15", triggeredBy29)
+        ' Label15 (100% rule) takes precedence when both are active.
+        If triggeredBy29 Then
+            SetControlVisibilityByName("Label14", False)
+            SetControlVisibilityByName("Label15", True)
+        Else
+            SetControlVisibilityByName("Label14", triggeredBy28)
+            SetControlVisibilityByName("Label15", False)
+        End If
 
         If triggeredBy28 OrElse triggeredBy29 Then
-            ' Your override: keep existing checks, then force-hide/show these controls.
             Button1.Visible = False
             Button2.Visible = False
             Label2.Visible = False
             TextBox1.Visible = False
             ComboBox1.Visible = False
+            Label6.Visible = False
             Label5.Visible = False
             CheckBox40.Visible = False
             CheckBox41.Visible = False
             Button3.Visible = True
         Else
-            ' Revert only controls driven by this override.
             Button3.Visible = False
         End If
     End Sub
@@ -1627,7 +1814,14 @@ Public Class StudentUnits
 
             With OutMail
                 .To = toAddress
-                .CC = "electrotechnology.admin@vu.edu.au"
+                Dim ccRecipients As New List(Of String)()
+                ccRecipients.Add("electrotechnology.admin@vu.edu.au")
+                Dim employerEmail As String = MainFrm.EmployerEmailLBL.Text?.Trim()
+                If Not String.IsNullOrWhiteSpace(employerEmail) AndAlso
+                   Not ccRecipients.Any(Function(x) String.Equals(x, employerEmail, StringComparison.OrdinalIgnoreCase)) Then
+                    ccRecipients.Add(employerEmail)
+                End If
+                .CC = String.Join(";", ccRecipients)
                 .Subject = subjectText
                 .HTMLbody = htmlBody & signatureHtml
                 If Not String.IsNullOrWhiteSpace(attachmentPath) AndAlso File.Exists(attachmentPath) Then
@@ -1675,11 +1869,20 @@ Public Class StudentUnits
     Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
         Dim studentName As String = (MainFrm.StudentFirstnameLBL.Text & " " & MainFrm.StudentSurnameLBL.Text).Trim()
         Dim subjectText As String = "Profiling Outcome - Insufficient Cards"
+        Dim requirementText As String
+        If CheckBox28.Checked AndAlso Not CheckBox29.Checked Then
+            requirementText = "Requirement: 85%"
+        ElseIf CheckBox28.Checked AndAlso CheckBox29.Checked Then
+            requirementText = "Requirement: 100%"
+        Else
+            requirementText = "Requirement: 100%"
+        End If
+
         Dim bodyText As String =
             "Hi " & studentName & "," & Environment.NewLine & Environment.NewLine &
             "Your profiling cards currently do not meet the required thresholds for progression." & Environment.NewLine &
-            "Requirement: 85% / 100% (system allows 99% where applicable)." & Environment.NewLine & Environment.NewLine &
-            "Please continue submitting profiling cards and contact us if you need assistance."
+            requirementText & Environment.NewLine & Environment.NewLine &
+            "Please continue submitting profiling cards, use the below improvement requirements to assist in your card entries and monitor your exemplar profiling to ensure you meet the targets before re-applying."
 
         Dim missingCodes As List(Of String) = Nothing
         Dim guidanceHtml As String = BuildUnderTargetUnitGuidanceHtml(missingCodes)

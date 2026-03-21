@@ -1364,10 +1364,11 @@ Partial Class StudentUnits
         ' 
         ButtonDebugSqlUnits.Location = New Point(1209, 147)
         ButtonDebugSqlUnits.Name = "ButtonDebugSqlUnits"
-        ButtonDebugSqlUnits.Size = New Size(174, 35)
+        ButtonDebugSqlUnits.Size = New Size(171, 35)
         ButtonDebugSqlUnits.TabIndex = 269
         ButtonDebugSqlUnits.Text = "DEBUG: List UEE30820units (SQL)"
         ButtonDebugSqlUnits.UseVisualStyleBackColor = True
+        ButtonDebugSqlUnits.Visible = False
         ' 
         ' Label14
         ' 
@@ -1382,7 +1383,7 @@ Partial Class StudentUnits
         ' Label15
         ' 
         Label15.AutoSize = True
-        Label15.Location = New Point(548, 907)
+        Label15.Location = New Point(556, 907)
         Label15.Name = "Label15"
         Label15.Size = New Size(307, 15)
         Label15.TabIndex = 268
@@ -1516,7 +1517,7 @@ Partial Class StudentUnits
         Controls.Add(ButtonDebugSqlUnits)
         Name = "StudentUnits"
         StartPosition = FormStartPosition.CenterParent
-        Text = "Form2"
+        Text = "Student Units"
         GroupBox1.ResumeLayout(False)
         CType(PictureBox1, ComponentModel.ISupportInitialize).EndInit()
         ResumeLayout(False)

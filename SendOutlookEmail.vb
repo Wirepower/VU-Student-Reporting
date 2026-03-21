@@ -28,7 +28,7 @@ Module SendOutlookEmail
         Dim notVerified As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingNotVerifiedValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingNotVerifiedValLbl.Text))
         Dim employerVerified As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingEmployerVerifiedValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingEmployerVerifiedValLbl.Text))
         Dim lastCard As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingLastCardValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingLastCardValLbl.Text))
-        Return "<BR><BR><b>Exemplar profiling (API)</b><BR>" &
+        Return "<BR><BR><b>Current Status</b><BR>" &
             "Cards not submitted/Outstanding: " & missing & "<BR>" &
             "Cards Submitted (Not verified): " & notVerified & "<BR>" &
             "Cards submitted (Employer Verified): " & employerVerified & "<BR>" &
