@@ -9,6 +9,8 @@ Imports iText.Forms
 Imports System.Reflection.PortableExecutable
 Imports System.IO
 Imports System.Globalization
+Imports System.Net
+Imports System.Text
 
 Public Class StudentUnits
     Private connection As SqlConnection
@@ -16,7 +18,8 @@ Public Class StudentUnits
     Private ReadOnly unitCheckBoxes As New Dictionary(Of String, CheckBox)(StringComparer.OrdinalIgnoreCase)
     Private ReadOnly originalCheckBoxText As New Dictionary(Of CheckBox, String)
     Private isRevertingUnitOverride As Boolean = False
-    
+    Private lastUnitProgressResult As ExemplarUnitProgressResult = Nothing
+
 
 
     Private Sub CloseBTN_Click(sender As Object, e As EventArgs) Handles CloseBTN.Click
@@ -611,7 +614,7 @@ Public Class StudentUnits
 
     End Sub
 
-    
+
     Private Sub UpdateLabelWithDatabaseDate()
         Try
             ' Construct the SQL query to retrieve the database update date
@@ -731,6 +734,186 @@ Public Class StudentUnits
         Return Nothing
     End Function
 
+    Private Class UnitExceptionMapping
+        Public Property UnitTitle As String
+        Public Property ExceptionReport As String
+    End Class
+
+    Private Function ExtractUnitTitle(text As String) As String
+        If String.IsNullOrWhiteSpace(text) Then
+            Return ""
+        End If
+
+        Dim idx As Integer = text.IndexOf("-"c)
+        If idx < 0 OrElse idx >= text.Length - 1 Then
+            Return text.Trim()
+        End If
+
+        Return text.Substring(idx + 1).Trim()
+    End Function
+
+    Private Function GetUnitTitleFromCheckBox(unitCode As String) As String
+        If String.IsNullOrWhiteSpace(unitCode) Then
+            Return unitCode
+        End If
+
+        Dim cb As CheckBox = Nothing
+        If unitCheckBoxes.TryGetValue(unitCode, cb) AndAlso cb IsNot Nothing Then
+            Dim originalText As String = Nothing
+            If originalCheckBoxText.TryGetValue(cb, originalText) AndAlso Not String.IsNullOrWhiteSpace(originalText) Then
+                Return ExtractUnitTitle(originalText)
+            End If
+
+            Return ExtractUnitTitle(cb.Text)
+        End If
+
+        Return unitCode
+    End Function
+
+    Private Function GetUnitMetricFromApiOrLabel(unitCode As String, suffix As String) As Nullable(Of Double)
+        Dim apiValue As Nullable(Of Double) = Nothing
+        If lastUnitProgressResult IsNot Nothing AndAlso lastUnitProgressResult.Units IsNot Nothing Then
+            Dim item As ExemplarUnitProgressItem = Nothing
+            If lastUnitProgressResult.Units.TryGetValue(unitCode, item) AndAlso item IsNot Nothing Then
+                If String.Equals(suffix, "EXP", StringComparison.OrdinalIgnoreCase) AndAlso item.ExperienceCardsPercentage.HasValue Then
+                    apiValue = CDbl(item.ExperienceCardsPercentage.Value)
+                ElseIf String.Equals(suffix, "DEMO", StringComparison.OrdinalIgnoreCase) AndAlso item.DemonstrationCardsPercentage.HasValue Then
+                    apiValue = CDbl(item.DemonstrationCardsPercentage.Value)
+                End If
+            End If
+        End If
+
+        If apiValue.HasValue Then
+            Return apiValue
+        End If
+
+        Dim lbl As Label = TryGetUnitLabel(unitCode, suffix)
+        If lbl Is Nothing Then
+            Return Nothing
+        End If
+
+        Return TryParsePercent(lbl.Text)
+    End Function
+
+    Private Function GetBelowThresholdUnitCodes() As List(Of String)
+        Dim underTarget As New List(Of String)()
+        For Each code As String In unitCheckBoxes.Keys
+            Dim expValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "EXP")
+            Dim demoValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "DEMO")
+
+            ' Include N/A (unparseable / missing) on either side. Only exclude when BOTH metrics are
+            ' known and each is at least 100% (nothing "under 100" and no unknowns).
+            Dim bothAtOrAbove100 As Boolean =
+                expValue.HasValue AndAlso demoValue.HasValue AndAlso
+                expValue.Value >= 100.0 AndAlso demoValue.Value >= 100.0
+
+            If Not bothAtOrAbove100 Then
+                underTarget.Add(code)
+            End If
+        Next
+
+        Return underTarget
+    End Function
+
+    Private Function GetUnitExceptionMappings(unitCodes As List(Of String), ByRef missingCodes As List(Of String)) As Dictionary(Of String, UnitExceptionMapping)
+        Dim mappings As New Dictionary(Of String, UnitExceptionMapping)(StringComparer.OrdinalIgnoreCase)
+        missingCodes = New List(Of String)()
+
+        If unitCodes Is Nothing OrElse unitCodes.Count = 0 Then
+            Return mappings
+        End If
+
+        Dim parameterNames As New List(Of String)()
+        For i As Integer = 0 To unitCodes.Count - 1
+            parameterNames.Add("@u" & i.ToString(CultureInfo.InvariantCulture))
+        Next
+
+        Dim query As String =
+            "SELECT Unit_Code, Unit_Title, ExceptionReport " &
+            "FROM ElectrotechnologyReports.dbo.UEE30820units " &
+            "WHERE Unit_Code IN (" & String.Join(", ", parameterNames) & ")"
+
+        Using sqlConnection As New SqlConnection(SQLCon.connectionString)
+            Using command As New SqlCommand(query, sqlConnection)
+                For i As Integer = 0 To unitCodes.Count - 1
+                    command.Parameters.AddWithValue(parameterNames(i), unitCodes(i))
+                Next
+
+                sqlConnection.Open()
+                Using reader As SqlDataReader = command.ExecuteReader()
+                    While reader.Read()
+                        Dim code As String = If(reader("Unit_Code"), "").ToString().Trim().ToUpperInvariant()
+                        If String.IsNullOrWhiteSpace(code) Then
+                            Continue While
+                        End If
+
+                        Dim title As String = If(reader("Unit_Title"), "").ToString().Trim()
+                        Dim exceptionText As String = If(reader("ExceptionReport"), "").ToString().Trim()
+
+                        If String.IsNullOrWhiteSpace(exceptionText) Then
+                            Continue While
+                        End If
+
+                        mappings(code) = New UnitExceptionMapping With {
+                            .UnitTitle = title,
+                            .ExceptionReport = exceptionText
+                        }
+                    End While
+                End Using
+            End Using
+        End Using
+
+        For Each code As String In unitCodes
+            If Not mappings.ContainsKey(code) Then
+                missingCodes.Add(code)
+            End If
+        Next
+
+        Return mappings
+    End Function
+
+    Private Function BuildUnderTargetUnitGuidanceHtml(ByRef missingCodes As List(Of String)) As String
+        Dim underTargetCodes As List(Of String) = GetBelowThresholdUnitCodes()
+        If underTargetCodes.Count = 0 Then
+            missingCodes = New List(Of String)()
+            Return ""
+        End If
+
+        Dim mappings As Dictionary(Of String, UnitExceptionMapping) = GetUnitExceptionMappings(underTargetCodes, missingCodes)
+        Dim lines As New List(Of String)()
+
+        For Each code As String In underTargetCodes
+            Dim mapping As UnitExceptionMapping = Nothing
+            If Not mappings.TryGetValue(code, mapping) OrElse mapping Is Nothing Then
+                Continue For
+            End If
+
+            Dim unitTitle As String = mapping.UnitTitle
+            If String.IsNullOrWhiteSpace(unitTitle) Then
+                unitTitle = GetUnitTitleFromCheckBox(code)
+            End If
+
+            Dim experienceValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "EXP")
+            Dim demonstrationValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "DEMO")
+            Dim experienceText As String = If(experienceValue.HasValue, CInt(Math.Round(experienceValue.Value, 0)).ToString(CultureInfo.InvariantCulture) & "%", "N/A")
+            Dim demonstrationText As String = If(demonstrationValue.HasValue, CInt(Math.Round(demonstrationValue.Value, 0)).ToString(CultureInfo.InvariantCulture) & "%", "N/A")
+
+            lines.Add(
+                "<li><b>" &
+                WebUtility.HtmlEncode(code & ": " & unitTitle) &
+                "</b><br>" &
+                "Experience: " & WebUtility.HtmlEncode(experienceText) & " | Demonstration: " & WebUtility.HtmlEncode(demonstrationText) &
+                "<br><span style='color:#c00000;'>" & WebUtility.HtmlEncode(mapping.ExceptionReport) & "</span></li>"
+            )
+        Next
+
+        If lines.Count = 0 Then
+            Return ""
+        End If
+
+        Return "<br><br><b>Units requiring improvement:</b><br><ul>" & String.Join("", lines) & "</ul>"
+    End Function
+
     Private Sub UpdateAveragePercentageLabel()
         ' Label13 is created in the Designer by you.
         Dim found As Control() = Me.Controls.Find("Label13", True)
@@ -811,6 +994,7 @@ Public Class StudentUnits
 
     Private Sub ApplyUnitProfilingAnnotations(progressResult As ExemplarUnitProgressResult)
         ResetProfilingAnnotations()
+        lastUnitProgressResult = progressResult
 
         ' Iterate the API's returned unit keys directly to avoid any key casing mismatch.
         For Each pair In progressResult.Units
@@ -1421,9 +1605,23 @@ Public Class StudentUnits
         Return True
     End Function
 
-    Private Sub CreateOutlookDraft(toAddress As String, subjectText As String, bodyText As String, Optional attachmentPath As String = "")
+    Private Sub CreateOutlookDraft(toAddress As String, subjectText As String, bodyText As String, Optional attachmentPath As String = "", Optional bodyIsHtml As Boolean = False)
         Try
-            ' Match the existing working approach used elsewhere in the app.
+            ' Same signature image as Main mass email / SendOutlookEmail (DB JPEG as base64 in HTML).
+            Dim imageData As Byte() = RetrieveImageDataFromDatabase()
+            Dim htmlBody As String
+            If bodyIsHtml Then
+                htmlBody = bodyText
+            Else
+                htmlBody = WebUtility.HtmlEncode(bodyText).Replace(vbCrLf, "<br>").Replace(vbLf, "<br>")
+            End If
+            Dim signatureHtml As String
+            If imageData IsNot Nothing AndAlso imageData.Length > 0 Then
+                signatureHtml = "<br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & MainFrm.VersionLBL.Text
+            Else
+                signatureHtml = "<br>" & MainFrm.VersionLBL.Text
+            End If
+
             Dim OutApp As Object = CreateObject("Outlook.Application")
             Dim OutMail As Object = OutApp.CreateItem(0) ' olMailItem
 
@@ -1431,7 +1629,7 @@ Public Class StudentUnits
                 .To = toAddress
                 .CC = "electrotechnology.admin@vu.edu.au"
                 .Subject = subjectText
-                .Body = bodyText
+                .HTMLbody = htmlBody & signatureHtml
                 If Not String.IsNullOrWhiteSpace(attachmentPath) AndAlso File.Exists(attachmentPath) Then
                     .Attachments.Add(attachmentPath)
                 End If
@@ -1481,11 +1679,101 @@ Public Class StudentUnits
             "Hi " & studentName & "," & Environment.NewLine & Environment.NewLine &
             "Your profiling cards currently do not meet the required thresholds for progression." & Environment.NewLine &
             "Requirement: 85% / 100% (system allows 99% where applicable)." & Environment.NewLine & Environment.NewLine &
-            "Please continue submitting profiling cards and contact us if you need assistance." & Environment.NewLine & Environment.NewLine &
-            "Kind regards," & Environment.NewLine &
-            "Electrotechnology Administration"
+            "Please continue submitting profiling cards and contact us if you need assistance."
 
-        CreateOutlookDraft(MainFrm.StudentEmailLBL.Text, subjectText, bodyText)
+        Dim missingCodes As List(Of String) = Nothing
+        Dim guidanceHtml As String = BuildUnderTargetUnitGuidanceHtml(missingCodes)
+
+        If missingCodes IsNot Nothing AndAlso missingCodes.Count > 0 Then
+            MessageBox.Show(
+                "The following under-target units are missing in dbo.UEE30820units (or have blank ExceptionReport):" &
+                Environment.NewLine &
+                String.Join(", ", missingCodes),
+                "Missing Unit Mapping",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning
+            )
+        End If
+
+        Dim htmlBodyText As String =
+            WebUtility.HtmlEncode(bodyText).Replace(vbCrLf, "<br>").Replace(vbLf, "<br>") &
+            guidanceHtml &
+            "<br><br>Kind regards,<br>Electrotechnology Administration"
+
+        CreateOutlookDraft(MainFrm.StudentEmailLBL.Text, subjectText, htmlBodyText, bodyIsHtml:=True)
+    End Sub
+
+    ''' <summary>Temporary debug: same SQL connection as the app; lists dbo.UEE30820units for verification.</summary>
+    Private Sub ButtonDebugSqlUnits_Click(sender As Object, e As EventArgs) Handles ButtonDebugSqlUnits.Click
+        Const query As String =
+            "SELECT Unit_Code, Unit_Title, ExceptionReport " &
+            "FROM ElectrotechnologyReports.dbo.UEE30820units " &
+            "ORDER BY Unit_Code"
+
+        Dim sb As New StringBuilder()
+        Dim rowCount As Integer = 0
+
+        Try
+            Using conn As New SqlConnection(SQLCon.connectionString)
+                conn.Open()
+                Using cmd As New SqlCommand(query, conn)
+                    Using reader As SqlDataReader = cmd.ExecuteReader()
+                        While reader.Read()
+                            rowCount += 1
+                            Dim code As String = If(reader("Unit_Code"), "").ToString()
+                            Dim title As String = If(reader("Unit_Title"), "").ToString()
+                            Dim exceptionReport As String = If(reader("ExceptionReport"), "").ToString()
+                            sb.AppendLine("--- Row " & rowCount.ToString(CultureInfo.InvariantCulture) & " ---")
+                            sb.AppendLine("Unit_Code: " & code)
+                            sb.AppendLine("Unit_Title: " & title)
+                            sb.AppendLine("ExceptionReport: " & exceptionReport)
+                            sb.AppendLine()
+                        End While
+                    End Using
+                End Using
+            End Using
+        Catch ex As Exception
+            MessageBox.Show(
+                "SQL debug query failed (using app connection string):" & Environment.NewLine & ex.Message,
+                "DEBUG: UEE30820units",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error
+            )
+            Return
+        End Try
+
+        Dim header As String =
+            "Query: ElectrotechnologyReports.dbo.UEE30820units" & Environment.NewLine &
+            "Rows returned: " & rowCount.ToString(CultureInfo.InvariantCulture) & Environment.NewLine &
+            "(Uses SQLCon.connectionString — same as Button3 lookup.)" & Environment.NewLine & Environment.NewLine
+
+        Using dlg As New Form()
+            dlg.Text = "DEBUG — UEE30820units from SQL"
+            dlg.Size = New System.Drawing.Size(920, 620)
+            dlg.StartPosition = FormStartPosition.CenterParent
+            dlg.MinimizeBox = False
+            dlg.MaximizeBox = True
+
+            Dim closeBtn As New Button With {
+                .Text = "Close",
+                .Dock = DockStyle.Bottom,
+                .Height = 36
+            }
+            AddHandler closeBtn.Click, Sub() dlg.Close()
+            dlg.Controls.Add(closeBtn)
+
+            Dim tb As New TextBox With {
+                .Multiline = True,
+                .ReadOnly = True,
+                .ScrollBars = ScrollBars.Both,
+                .Dock = DockStyle.Fill,
+                .Font = New System.Drawing.Font(System.Drawing.FontFamily.GenericMonospace, 10.0F),
+                .Text = header & sb.ToString()
+            }
+            dlg.Controls.Add(tb)
+
+            dlg.ShowDialog(Me)
+        End Using
     End Sub
 
     Private Sub CheckBox40_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox40.CheckedChanged

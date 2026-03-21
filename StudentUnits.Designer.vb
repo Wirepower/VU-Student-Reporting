@@ -139,6 +139,7 @@ Partial Class StudentUnits
         Label13 = New Label()
         Button2 = New Button()
         Button3 = New Button()
+        ButtonDebugSqlUnits = New Button()
         Label14 = New Label()
         Label15 = New Label()
         GroupBox1.SuspendLayout()
@@ -169,7 +170,7 @@ Partial Class StudentUnits
         ' SelectedStudentLBL
         ' 
         SelectedStudentLBL.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(192))
-        SelectedStudentLBL.Font = New Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        SelectedStudentLBL.Font = New Font("Segoe UI", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         SelectedStudentLBL.ForeColor = Color.Red
         SelectedStudentLBL.Location = New Point(8, 20)
         SelectedStudentLBL.Margin = New Padding(4, 0, 4, 0)
@@ -223,7 +224,7 @@ Partial Class StudentUnits
         ' Label1
         ' 
         Label1.AutoSize = True
-        Label1.Font = New Font("Segoe UI", 24F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        Label1.Font = New Font("Segoe UI", 24.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         Label1.Location = New Point(609, 25)
         Label1.Margin = New Padding(4, 0, 4, 0)
         Label1.Name = "Label1"
@@ -233,7 +234,7 @@ Partial Class StudentUnits
         ' 
         ' UnitAlertLbl1
         ' 
-        UnitAlertLbl1.Font = New Font("Segoe UI", 18F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        UnitAlertLbl1.Font = New Font("Segoe UI", 18.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         UnitAlertLbl1.ForeColor = Color.Red
         UnitAlertLbl1.Location = New Point(507, 115)
         UnitAlertLbl1.Name = "UnitAlertLbl1"
@@ -626,6 +627,7 @@ Partial Class StudentUnits
         RefreshProfilingBtn.TabIndex = 104
         RefreshProfilingBtn.Text = "Refresh Profiling %"
         RefreshProfilingBtn.UseVisualStyleBackColor = True
+        RefreshProfilingBtn.Visible = False
         ' 
         ' ProfilingSummaryLbl
         ' 
@@ -1358,6 +1360,15 @@ Partial Class StudentUnits
         Button3.UseVisualStyleBackColor = True
         Button3.Visible = False
         ' 
+        ' ButtonDebugSqlUnits
+        ' 
+        ButtonDebugSqlUnits.Location = New Point(1209, 147)
+        ButtonDebugSqlUnits.Name = "ButtonDebugSqlUnits"
+        ButtonDebugSqlUnits.Size = New Size(174, 35)
+        ButtonDebugSqlUnits.TabIndex = 269
+        ButtonDebugSqlUnits.Text = "DEBUG: List UEE30820units (SQL)"
+        ButtonDebugSqlUnits.UseVisualStyleBackColor = True
+        ' 
         ' Label14
         ' 
         Label14.AutoSize = True
@@ -1380,7 +1391,7 @@ Partial Class StudentUnits
         ' 
         ' StudentUnits
         ' 
-        AutoScaleDimensions = New SizeF(96F, 96F)
+        AutoScaleDimensions = New SizeF(96.0F, 96.0F)
         AutoScaleMode = AutoScaleMode.Dpi
         AutoScroll = True
         BackColor = SystemColors.GradientActiveCaption
@@ -1502,6 +1513,7 @@ Partial Class StudentUnits
         Controls.Add(PictureBox1)
         Controls.Add(CloseBTN)
         Controls.Add(Label1)
+        Controls.Add(ButtonDebugSqlUnits)
         Name = "StudentUnits"
         StartPosition = FormStartPosition.CenterParent
         Text = "Form2"
@@ -1627,6 +1639,7 @@ Partial Class StudentUnits
     Friend WithEvents Label13 As Label
     Friend WithEvents Button2 As Button
     Friend WithEvents Button3 As Button
+    Friend WithEvents ButtonDebugSqlUnits As Button
     Friend WithEvents Label14 As Label
     Friend WithEvents Label15 As Label
 End Class
