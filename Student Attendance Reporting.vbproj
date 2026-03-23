@@ -28,8 +28,13 @@
 
   <ItemGroup>
     <PackageReference Include="EPPlus" Version="7.1.2" />
-    <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1000" />
-    <PackageReference Include="Microsoft.Office.Interop.Outlook" Version="15.0.4797.1004" />
+    <!-- EmbedInteropTypes: avoids FileNotFoundException for assembly 'office' (Office Core) at runtime on .NET 8 -->
+    <PackageReference Include="Microsoft.Office.Interop.Excel" Version="15.0.4795.1000">
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Office.Interop.Outlook" Version="15.0.4797.1004">
+      <EmbedInteropTypes>true</EmbedInteropTypes>
+    </PackageReference>
     <PackageReference Include="iTextSharp" Version="5.5.13.3" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="5.2.0" />
     <PackageReference Include="Microsoft.Office365.SharePoint" Version="1.0.22" />
