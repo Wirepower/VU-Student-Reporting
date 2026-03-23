@@ -1,4 +1,4 @@
-﻿Option Explicit On
+Option Explicit On
 Imports Microsoft.Data.SqlClient
 'Imports MyNamespace
 Imports System.Windows.Forms
@@ -22,6 +22,19 @@ Module SendOutlookEmail
     Dim othertext As String
     Dim LastStudentReportDate As String
 
+    ''' <summary>Inserted between SQL EmailBody and JPEG signature when template is Exemplar Profiling Outstanding Alert.</summary>
+    Private Function BuildExemplarProfilingSummaryHtml() As String
+        Dim missing As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingMissingValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingMissingValLbl.Text))
+        Dim notVerified As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingNotVerifiedValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingNotVerifiedValLbl.Text))
+        Dim employerVerified As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingEmployerVerifiedValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingEmployerVerifiedValLbl.Text))
+        Dim lastCard As String = If(String.IsNullOrWhiteSpace(MainFrm.ProfilingLastCardValLbl.Text), "?", WebUtility.HtmlEncode(MainFrm.ProfilingLastCardValLbl.Text))
+        Return "<BR><BR><b>Current Status</b><BR>" &
+            "Cards not submitted/Outstanding: " & missing & "<BR>" &
+            "Cards Submitted (Not verified): " & notVerified & "<BR>" &
+            "Cards submitted (Employer Verified): " & employerVerified & "<BR>" &
+            "Last Card Submission: " & lastCard & "<BR>"
+    End Function
+
     Sub SendOutlookEmail(studentID As Double, studentFirstname As String, studentSurname As String, studentEmail As String, employerFirstname As String, employerSurname As String, employerBusinessName As String, employerEmail As String)
         Dim OutApp As Object
         Dim OutMail As Object
@@ -39,6 +52,9 @@ Module SendOutlookEmail
 
         ' Get the email body for the selected template
         body = GenerateEmailTemplateSQL(selectedTemplate, studentID, studentFirstname, studentSurname, studentEmail, employerFirstname, employerSurname, employerBusinessName, employerEmail)
+        If selectedTemplate = "Exemplar Profiling Outstanding Alert" Then
+            body &= BuildExemplarProfilingSummaryHtml()
+        End If
         ' Create a new instance of Outlook application
 
         ' Get the image data from the database

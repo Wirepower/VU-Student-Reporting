@@ -949,7 +949,6 @@ Partial Class MainFrm
         Button9.Size = New Size(170, 51)
         Button9.TabIndex = 90
         Button9.Text = "Issue Report" & vbCrLf & "Feature Request"
-        Button9.TextAlign = ContentAlignment.MiddleCenter
         Button9.UseVisualStyleBackColor = True
         ' 
         ' resitLabel
@@ -1067,7 +1066,7 @@ Partial Class MainFrm
         ' ProfilingEmployerVerifiedValLbl
         ' 
         ProfilingEmployerVerifiedValLbl.AutoSize = True
-        ProfilingEmployerVerifiedValLbl.Location = New Point(988, 532)
+        ProfilingEmployerVerifiedValLbl.Location = New Point(993, 532)
         ProfilingEmployerVerifiedValLbl.Name = "ProfilingEmployerVerifiedValLbl"
         ProfilingEmployerVerifiedValLbl.Size = New Size(17, 21)
         ProfilingEmployerVerifiedValLbl.TabIndex = 102
@@ -1078,7 +1077,7 @@ Partial Class MainFrm
         ' 
         ProfilingLastCardLbl.AutoSize = True
         ProfilingLastCardLbl.ForeColor = Color.Blue
-        ProfilingLastCardLbl.Location = New Point(1030, 532)
+        ProfilingLastCardLbl.Location = New Point(1051, 532)
         ProfilingLastCardLbl.Name = "ProfilingLastCardLbl"
         ProfilingLastCardLbl.Size = New Size(163, 21)
         ProfilingLastCardLbl.TabIndex = 103
@@ -1088,7 +1087,7 @@ Partial Class MainFrm
         ' ProfilingLastCardValLbl
         ' 
         ProfilingLastCardValLbl.AutoSize = True
-        ProfilingLastCardValLbl.Location = New Point(1197, 532)
+        ProfilingLastCardValLbl.Location = New Point(1218, 532)
         ProfilingLastCardValLbl.Name = "ProfilingLastCardValLbl"
         ProfilingLastCardValLbl.Size = New Size(17, 21)
         ProfilingLastCardValLbl.TabIndex = 104
