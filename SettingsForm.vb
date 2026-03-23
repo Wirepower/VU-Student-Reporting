@@ -1,4 +1,4 @@
-﻿Imports Microsoft.Data.SqlClient
+Imports Microsoft.Data.SqlClient
 Imports Microsoft.VisualBasic.FileIO
 Imports System.Data.SqlClient
 Imports System.IO
@@ -1394,47 +1394,43 @@ Public Class SettingsForm
 
     Private Sub Button13_Click(sender As Object, e As EventArgs) Handles Button13.Click
 
-        Dim result As DialogResult = MessageBox.Show("Open up the excel file using Excel program and confirm you have:" & vbCrLf & vbCrLf & "Deleted Rows 1-3 Showing only Column headings on row 1?" & vbCrLf & vbCrLf & "Deleted duplicate Student ID rows having only 1 unique Student ID if prompted?" & vbCrLf & vbCrLf & "Deleted all columns after Column AS?" & vbCrLf & vbCrLf & "For entire Student Personal Mobile column, to set coliumn to STRING use the Excel Text to columns feature and " & vbCrLf & "Select delimited & next, selecting tab & next, checking text & hitting the finish button. Repeat this for all applicable STRING column errors" & vbCrLf & vbCrLf & vbCrLf & "If all the above has been completed, you may hit Yes otherwise hit No", "Confirmation", MessageBoxButtons.YesNo)
+        Dim openFileDialog1 As New OpenFileDialog()
+        openFileDialog1.Filter = "Excel Files|*.xls;*.xlsx;*.xlsm"
+        openFileDialog1.Title = "Select an Excel File"
 
-        If result = DialogResult.Yes Then
-            Dim openFileDialog1 As New OpenFileDialog()
-            openFileDialog1.Filter = "Excel Files|*.xls;*.xlsx;*.xlsm"
-            openFileDialog1.Title = "Select an Excel File"
+        If openFileDialog1.ShowDialog() = DialogResult.OK Then
+            Dim excelFilePath As String = openFileDialog1.FileName
 
-            If openFileDialog1.ShowDialog() = DialogResult.OK Then
-                Dim excelFilePath As String = openFileDialog1.FileName
+            ' Define SQL column names
+            Dim sqlColumnNames As New List(Of String) From {
+                "Agreement ID", "Student ID", "Student Given Name", "Student Family Name", "Epsilon Start Date",
+                "Epsilon End Date", "Student Personal Email", "Student Personal Mobile", "Employer Surname",
+                "Employer Given Name", "Employer Contact Phone", "Employer Email", "Agreement Category", "Course",
+                "Course Title", "Course Status", "Course Location", "Block Group Code", "Agreement Status",
+                "Agreement Task", "Employer Name", "Employer ABN", "School Name", "School Email", "Org Unit",
+                "Agreement Name", "Agreement Type Code", "Training Plan Generated", "Signed Training Plan Uploaded",
+                "Units for Employer Sign off", "Progress Report Generated", "Signed Progress Report Uploaded",
+                "All Units Resulted?", "All Units Verified?", "Number Units Completed", "Course Hours Completed",
+                "Any Sanctions", "Completion Training Plan Generated", "Signed Completion Training Plan Uploaded",
+                "Department Email", "Student VU Email", "Actual Start Date", "Actual End Date", "Age of Agreement",
+                "Apprenticeship Client ID"
+            }
 
-                ' Define SQL column names
-                Dim sqlColumnNames As New List(Of String) From {
-                    "Agreement ID", "Student ID", "Student Given Name", "Student Family Name", "Epsilon Start Date",
-                    "Epsilon End Date", "Student Personal Email", "Student Personal Mobile", "Employer Surname",
-                    "Employer Given Name", "Employer Contact Phone", "Employer Email", "Agreement Category", "Course",
-                    "Course Title", "Course Status", "Course Location", "Block Group Code", "Agreement Status",
-                    "Agreement Task", "Employer Name", "Employer ABN", "School Name", "School Email", "Org Unit",
-                    "Agreement Name", "Agreement Type Code", "Training Plan Generated", "Signed Training Plan Uploaded",
-                    "Units for Employer Sign off", "Progress Report Generated", "Signed Progress Report Uploaded",
-                    "All Units Resulted?", "All Units Verified?", "Number Units Completed", "Course Hours Completed",
-                    "Any Sanctions", "Completion Training Plan Generated", "Signed Completion Training Plan Uploaded",
-                    "Department Email", "Student VU Email", "Actual Start Date", "Actual End Date", "Age of Agreement",
-                    "Apprenticeship Client ID"
-                }
+            ' Perform data validation checks
+            Dim isValid As Boolean = ValidateExcelData(excelFilePath, sqlColumnNames)
 
-                ' Perform data validation checks
-                Dim isValid As Boolean = ValidateExcelData(excelFilePath, sqlColumnNames)
+            If isValid Then
+                Dim importResult As DialogResult = MessageBox.Show("Validation successful. Do you want to proceed with importing data into SQL?", "Confirmation", MessageBoxButtons.YesNo)
 
-                If isValid Then
-                    Dim importResult As DialogResult = MessageBox.Show("Validation successful. Do you want to proceed with importing data into SQL?", "Confirmation", MessageBoxButtons.YesNo)
-
-                    If importResult = DialogResult.Yes Then
-                        ' Call function to import data into SQL
-                        ' ImportDataIntoSQL(excelFilePath)
-                    Else
-                        ' User chose not to proceed, exit the sub
-                        Exit Sub
-                    End If
+                If importResult = DialogResult.Yes Then
+                    ' Call function to import data into SQL
+                    ' ImportDataIntoSQL(excelFilePath)
                 Else
-                    MessageBox.Show("Validation failed. Please check the Excel file and try again.")
+                    ' User chose not to proceed, exit the sub
+                    Exit Sub
                 End If
+            Else
+                MessageBox.Show("Validation failed. Please check the Excel file and try again.")
             End If
         End If
     End Sub
