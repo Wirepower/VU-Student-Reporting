@@ -118,6 +118,7 @@ Partial Class MainFrm
         ProfilingLastCardValLbl = New Label()
         Button11 = New Button()
         Button12 = New Button()
+        Label40 = New Label()
         CType(PictureBox1, ComponentModel.ISupportInitialize).BeginInit()
         SuspendLayout()
         ' 
@@ -1035,7 +1036,7 @@ Partial Class MainFrm
         ' 
         ProfilingNotVerifiedLbl.AutoSize = True
         ProfilingNotVerifiedLbl.ForeColor = Color.Orange
-        ProfilingNotVerifiedLbl.Location = New Point(463, 532)
+        ProfilingNotVerifiedLbl.Location = New Point(445, 532)
         ProfilingNotVerifiedLbl.Name = "ProfilingNotVerifiedLbl"
         ProfilingNotVerifiedLbl.Size = New Size(225, 21)
         ProfilingNotVerifiedLbl.TabIndex = 99
@@ -1045,7 +1046,7 @@ Partial Class MainFrm
         ' ProfilingNotVerifiedValLbl
         ' 
         ProfilingNotVerifiedValLbl.AutoSize = True
-        ProfilingNotVerifiedValLbl.Location = New Point(694, 532)
+        ProfilingNotVerifiedValLbl.Location = New Point(676, 532)
         ProfilingNotVerifiedValLbl.Name = "ProfilingNotVerifiedValLbl"
         ProfilingNotVerifiedValLbl.Size = New Size(17, 21)
         ProfilingNotVerifiedValLbl.TabIndex = 100
@@ -1114,6 +1115,18 @@ Partial Class MainFrm
         Button12.Text = "Student Re-Allocation Request"
         Button12.UseVisualStyleBackColor = True
         ' 
+        ' Label40
+        ' 
+        Label40.AutoSize = True
+        Label40.Font = New Font("Segoe UI", 15.75F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        Label40.ForeColor = Color.Red
+        Label40.Location = New Point(260, 362)
+        Label40.Name = "Label40"
+        Label40.Size = New Size(315, 30)
+        Label40.TabIndex = 106
+        Label40.Text = "EXEMPLAR PROFILING ALERT!"
+        Label40.Visible = False
+        ' 
         ' MainFrm
         ' 
         AutoScaleDimensions = New SizeF(96F, 96F)
@@ -1121,6 +1134,7 @@ Partial Class MainFrm
         AutoScroll = True
         BackColor = SystemColors.GradientActiveCaption
         ClientSize = New Size(1409, 1019)
+        Controls.Add(Label40)
         Controls.Add(Button12)
         Controls.Add(ProfilingLastCardValLbl)
         Controls.Add(ProfilingLastCardLbl)
@@ -1319,5 +1333,6 @@ Partial Class MainFrm
     Friend WithEvents ProfilingLastCardValLbl As Label
     Friend WithEvents Button11 As Button
     Friend WithEvents Button12 As Button
+    Friend WithEvents Label40 As Label
 
 End Class

@@ -465,6 +465,7 @@ Public Class MainFrm
         ProfilingEmployerVerifiedValLbl.Visible = False
         ProfilingLastCardLbl.Visible = False
         ProfilingLastCardValLbl.Visible = False
+        UpdateLabel40VisibilityFromProfilingMissing()
     End Sub
 
     ''' <summary>Shows Connected in its own label and the card stats in separate colored labels (move them in the Designer).</summary>
@@ -499,6 +500,18 @@ Public Class MainFrm
         ProfilingEmployerVerifiedValLbl.Visible = True
         ProfilingLastCardLbl.Visible = True
         ProfilingLastCardValLbl.Visible = True
+        UpdateLabel40VisibilityFromProfilingMissing()
+    End Sub
+
+    Private Sub UpdateLabel40VisibilityFromProfilingMissing()
+        Dim matchingControls() As Control = Me.Controls.Find("Label40", True)
+        If matchingControls Is Nothing OrElse matchingControls.Length = 0 Then
+            Return
+        End If
+
+        Dim missingCount As Integer
+        Dim hasMissingCount As Boolean = Integer.TryParse(If(ProfilingMissingValLbl.Text, String.Empty).Trim(), missingCount)
+        matchingControls(0).Visible = hasMissingCount AndAlso missingCount >= 8
     End Sub
 
     Private Sub UpdateExemplarProfilingEmailButtonVisibility()
@@ -715,8 +728,82 @@ Public Class MainFrm
                 .UseShellExecute = True
             }
             System.Diagnostics.Process.Start(psi)
+
+            ' Draft email: student + employer in To; Trades + electrotechnology admin in CC
+            Dim studentEmail As String = If(StudentEmailLBL.Text, String.Empty).Trim()
+            Dim employerEmail As String = If(EmployerEmailLBL.Text, String.Empty).Trim()
+            Dim toAddresses As New StringBuilder()
+            If Not String.IsNullOrWhiteSpace(studentEmail) Then
+                toAddresses.Append(studentEmail)
+            End If
+            If Not String.IsNullOrWhiteSpace(employerEmail) Then
+                If toAddresses.Length > 0 Then toAddresses.Append(";")
+                toAddresses.Append(employerEmail)
+            End If
+
+            If toAddresses.Length = 0 Then
+                MessageBox.Show("The re-allocation form was opened, but no student or employer email is on file, so an Outlook draft was not created. Add email addresses to the record and try again.",
+                    "Student Re-Allocation Request", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+                Return
+            End If
+
+            Dim studentFirst As String = If(StudentFirstnameLBL.Text, String.Empty).Trim()
+            Dim studentLast As String = If(StudentSurnameLBL.Text, String.Empty).Trim()
+            If String.Equals(studentFirst, "Student First Name", StringComparison.OrdinalIgnoreCase) Then studentFirst = String.Empty
+            If String.Equals(studentLast, "Student Surname", StringComparison.OrdinalIgnoreCase) Then studentLast = String.Empty
+            Dim studentFullName As String = ($"{studentFirst} {studentLast}").Trim()
+            If String.IsNullOrWhiteSpace(studentFullName) Then studentFullName = "the student"
+
+            Dim employerFirst As String = If(EmployerFirstnameLBL.Text, String.Empty).Trim()
+            Dim employerLast As String = If(EmployerSurnameLBL.Text, String.Empty).Trim()
+            If String.Equals(employerFirst, "Employer First Name", StringComparison.OrdinalIgnoreCase) Then employerFirst = String.Empty
+            If String.Equals(employerLast, "Employer Surname", StringComparison.OrdinalIgnoreCase) Then employerLast = String.Empty
+            Dim employerName As String = ($"{employerFirst} {employerLast}").Trim()
+            If String.IsNullOrWhiteSpace(employerName) Then
+                Dim employerBusinessName As String = If(EmployerBusinessNameLBL.Text, String.Empty).Trim()
+                If String.Equals(employerBusinessName, "Employer Business Name", StringComparison.OrdinalIgnoreCase) Then
+                    employerBusinessName = String.Empty
+                End If
+                employerName = employerBusinessName
+            End If
+
+            Dim greetingRecipients As String
+            If String.IsNullOrWhiteSpace(employerName) Then
+                greetingRecipients = studentFullName
+            Else
+                greetingRecipients = studentFullName & " and " & employerName
+            End If
+
+            Dim safeStudentFull As String = WebUtility.HtmlEncode(studentFullName)
+            Dim safeGreetingRecipients As String = WebUtility.HtmlEncode(greetingRecipients)
+
+            Dim htmlBody As String =
+                "<p>Hello " & safeGreetingRecipients & ",</p>" &
+                "<p>Please be advised that <strong>" & safeStudentFull & "</strong> has been re-allocated to a different class within the Electrotechnology program. " &
+                "<strong>" & safeStudentFull & "</strong> must <strong>not</strong> attend further sessions under the previous class allocation until formal confirmation or further notice is provided by Victoria University.</p>" &
+                "<p>If you have any questions, please reply to this email.</p>" &
+                "<p>Thank you for your cooperation.</p>"
+
+            Dim OutApp As Object = CreateObject("Outlook.Application")
+            Dim OutMail As Object = OutApp.CreateItem(0)
+            With OutMail
+                .To = toAddresses.ToString()
+                .CC = "Trades@vu.edu.au;electrotechnology.admin@vu.edu.au"
+                .Subject = "Student Class Re-allocation"
+                ' Show the inspector first so Outlook injects this account's default signature (not the app DB image).
+                .Display()
+            End With
+
+            ' Allow Outlook to populate HTMLBody with the user's signature, then prepend our message.
+            System.Windows.Forms.Application.DoEvents()
+            Dim outlookBody As String = TryCast(OutMail.HTMLBody, String)
+            If String.IsNullOrWhiteSpace(outlookBody) Then
+                OutMail.HTMLBody = htmlBody
+            Else
+                OutMail.HTMLBody = htmlBody & outlookBody
+            End If
         Catch ex As System.Exception
-            MessageBox.Show("Could not open the form link." & vbCrLf & ex.Message, "Student Re-Allocation Request", MessageBoxButtons.OK, MessageBoxIcon.Error)
+            MessageBox.Show("Could not complete the re-allocation request (form and/or email)." & vbCrLf & ex.Message, "Student Re-Allocation Request", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
     End Sub
 
