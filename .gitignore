@@ -364,3 +364,7 @@ FodyWeavers.xsd
 
 # Bundled JRE download (optional; jre folder is used after extract)
 OpenJDK*.zip
+
+# Generated WiX files/artifacts
+installer/wix/AppFiles.wxs
+artifacts/

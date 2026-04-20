@@ -18,7 +18,10 @@ param(
     [switch]$SelfContained,
     [string]$Runtime = "win-x64",
     [string]$Configuration = "Release",
-    [string]$OutputPath = ""
+    [string]$OutputPath = "",
+    [string]$VersionPrefix = "",
+    [string]$AssemblyVersion = "",
+    [string]$FileVersion = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -37,6 +40,15 @@ if ([string]::IsNullOrWhiteSpace($OutputPath)) {
 Write-Host "Repo: $repoRoot"
 Write-Host "Output: $OutputPath"
 Write-Host "Configuration: $Configuration | Runtime: $Runtime | SelfContained: $SelfContained"
+if (-not [string]::IsNullOrWhiteSpace($VersionPrefix)) {
+    Write-Host "VersionPrefix: $VersionPrefix"
+}
+if (-not [string]::IsNullOrWhiteSpace($AssemblyVersion)) {
+    Write-Host "AssemblyVersion: $AssemblyVersion"
+}
+if (-not [string]::IsNullOrWhiteSpace($FileVersion)) {
+    Write-Host "FileVersion: $FileVersion"
+}
 
 $args = @(
     "publish", "`"$projectFile`"",
@@ -49,6 +61,19 @@ if ($SelfContained) {
     $args += "--self-contained", "true"
 } else {
     $args += "--self-contained", "false"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($VersionPrefix)) {
+    $args += "-p:VersionPrefix=$VersionPrefix"
+    $args += "-p:Version=$VersionPrefix"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($AssemblyVersion)) {
+    $args += "-p:AssemblyVersion=$AssemblyVersion"
+}
+
+if (-not [string]::IsNullOrWhiteSpace($FileVersion)) {
+    $args += "-p:FileVersion=$FileVersion"
 }
 
 # Trim unused locale satellites in self-contained builds (optional size win)
@@ -67,4 +92,4 @@ Write-Host ""
 Write-Host "Done. Payload folder ready for your MSI/Setup project:"
 Write-Host "  $OutputPath"
 Write-Host ""
-Write-Host "Next: add this folder's contents to your Visual Studio Setup Project (see docs/MSI-Installer-Guide.md)."
+Write-Host "Next: package this payload with your installer workflow (Visual Studio Setup project or WiX)."

@@ -1,0 +1,133 @@
+name: Release Build and Publish
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Optional explicit release version in vX.Y format (example: v3.1)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-publish
+  cancel-in-progress: false
+
+jobs:
+  build-release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup .NET 8 SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Install WiX Toolset
+        shell: powershell
+        run: |
+          choco install wixtoolset --yes --no-progress
+
+      - name: Determine release version
+        id: version
+        shell: pwsh
+        run: |
+          $provided = "${{ github.event.inputs.version }}".Trim()
+          if ($provided) {
+            if ($provided -notmatch '^v\d+\.\d+$') {
+              throw "Manual version must match vX.Y (example: v3.1)."
+            }
+            $tag = $provided
+          } else {
+            $validTags = git tag -l | Where-Object { $_ -match '^v\d+\.\d+$' }
+            if (-not $validTags) {
+              $tag = "v1.0"
+            } else {
+              $latestTag = $validTags |
+                Sort-Object { [version](($_.Substring(1)) + ".0") } -Descending |
+                Select-Object -First 1
+
+              $latestTag -match '^v(\d+)\.(\d+)$' | Out-Null
+              $major = [int] $Matches[1]
+              $minor = [int] $Matches[2] + 1
+              $tag = "v$major.$minor"
+            }
+          }
+
+          $version = $tag.Substring(1)
+          $installerVersion = "$version.0"
+          Write-Host "Selected release tag: $tag"
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+          "version=$version" >> $env:GITHUB_OUTPUT
+          "installer_version=$installerVersion" >> $env:GITHUB_OUTPUT
+
+      - name: Publish self-contained EXE payload
+        shell: pwsh
+        run: |
+          ./build/Publish-ForInstaller.ps1 `
+            -SelfContained `
+            -Runtime "win-x64" `
+            -Configuration "Release" `
+            -OutputPath "publish/installer-payload/win-x64" `
+            -VersionPrefix "${{ steps.version.outputs.version }}" `
+            -AssemblyVersion "${{ steps.version.outputs.version }}" `
+            -FileVersion "${{ steps.version.outputs.version }}"
+
+      - name: Build WiX MSI
+        shell: pwsh
+        run: |
+          ./build/Build-WixMsi.ps1 `
+            -PayloadDirectory "publish/installer-payload/win-x64" `
+            -OutputDirectory "publish/release-artifacts" `
+            -ProductVersion "${{ steps.version.outputs.installer_version }}"
+
+      - name: Stage EXE for release assets
+        shell: pwsh
+        run: |
+          $assetDir = "publish/release-artifacts"
+          New-Item -ItemType Directory -Path $assetDir -Force | Out-Null
+
+          $exe = Get-ChildItem "publish/installer-payload/win-x64" -Filter "*.exe" -File |
+            Where-Object { $_.Name -notmatch '^vshost\.' } |
+            Select-Object -First 1
+
+          if (-not $exe) {
+            throw "No executable file found in publish/installer-payload/win-x64."
+          }
+
+          $targetExe = Join-Path $assetDir "StudentAttendanceReporting.exe"
+          Copy-Item $exe.FullName $targetExe -Force
+
+      - name: Create and push release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.version.outputs.tag }}"
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "Tag $TAG already exists."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin "$TAG"
+          fi
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            publish/release-artifacts/StudentAttendanceReporting.exe
+            publish/release-artifacts/StudentAttendanceReporting-Setup.msi
