@@ -51,10 +51,10 @@ if (-not [string]::IsNullOrWhiteSpace($FileVersion)) {
 }
 
 $args = @(
-    "publish", "`"$projectFile`"",
+    "publish", $projectFile,
     "-c", $Configuration,
     "-r", $Runtime,
-    "-o", "`"$OutputPath`""
+    "-o", $OutputPath
 )
 
 if ($SelfContained) {
