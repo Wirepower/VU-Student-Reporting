@@ -22,6 +22,8 @@
       Title="$(var.ProductName)"
       Level="1">
       <ComponentGroupRef Id="AppFiles" />
+      <ComponentRef Id="DesktopShortcutComponent" />
+      <ComponentRef Id="StartMenuShortcutComponent" />
     </Feature>
   </Product>
 
@@ -30,6 +32,52 @@
       <Directory Id="ProgramFiles64Folder">
         <Directory Id="INSTALLFOLDER" Name="Student Attendance Reporting" />
       </Directory>
+      <Directory Id="ProgramMenuFolder">
+        <Directory Id="ApplicationProgramsFolder" Name="Student Attendance Reporting" />
+      </Directory>
     </Directory>
+  </Fragment>
+
+  <Fragment>
+    <Component
+      Id="DesktopShortcutComponent"
+      Directory="DesktopFolder"
+      Guid="{8B4654B5-6BB2-4D28-B325-98A450F1A127}">
+      <Shortcut
+        Id="DesktopShortcut"
+        Name="Student Attendance Reporting"
+        Description="Student Attendance Reporting"
+        Target="[INSTALLFOLDER]Student Attendance Reporting.exe"
+        WorkingDirectory="INSTALLFOLDER" />
+      <RegistryValue
+        Root="HKMU"
+        Key="Software\Wirepower\StudentAttendanceReporting"
+        Name="DesktopShortcut"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
+  </Fragment>
+
+  <Fragment>
+    <Component
+      Id="StartMenuShortcutComponent"
+      Directory="ApplicationProgramsFolder"
+      Guid="{808A4568-8303-46CC-BEA4-3E7F7CFB4EF5}">
+      <Shortcut
+        Id="StartMenuShortcut"
+        Name="Student Attendance Reporting"
+        Description="Student Attendance Reporting"
+        Target="[INSTALLFOLDER]Student Attendance Reporting.exe"
+        WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
+      <RegistryValue
+        Root="HKMU"
+        Key="Software\Wirepower\StudentAttendanceReporting"
+        Name="StartMenuShortcut"
+        Type="integer"
+        Value="1"
+        KeyPath="yes" />
+    </Component>
   </Fragment>
 </Wix>
