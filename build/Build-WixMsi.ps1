@@ -65,9 +65,13 @@ $productWxs = Join-Path $wixSourceDir "Product.wxs"
 $wixObjDir = Join-Path $OutputDirectory "wixobj"
 $harvestWxs = Join-Path $wixObjDir "AppFiles.wxs"
 $msiPath = Join-Path $OutputDirectory $MsiName
+$shortcutIconPath = Join-Path $repoRoot "VU Support Hub_Desktop Icon-Favicon.ico"
 
 if (-not (Test-Path $productWxs)) {
     throw "WiX source not found: $productWxs"
+}
+if (-not (Test-Path $shortcutIconPath)) {
+    throw "Shortcut icon file not found: $shortcutIconPath"
 }
 
 New-Item -ItemType Directory -Path $OutputDirectory -Force | Out-Null
@@ -101,6 +105,7 @@ Write-Host "Version:    $ProductVersion"
     -dProductName="$ProductName" `
     -dManufacturer="$Manufacturer" `
     -dProductVersion="$ProductVersion" `
+    -dAppIconPath="$shortcutIconPath" `
     -out "$wixObjDir\" `
     "$productWxs" `
     "$harvestWxs"

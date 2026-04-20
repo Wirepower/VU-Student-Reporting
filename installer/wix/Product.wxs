@@ -16,7 +16,7 @@
     <MajorUpgrade
       DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
-    <Icon Id="AppShortcutIcon.ico" SourceFile="..\..\VU Support Hub_Desktop Icon-Favicon.ico" />
+    <Icon Id="AppShortcutIcon.ico" SourceFile="$(var.AppIconPath)" />
     <Property Id="ARPPRODUCTICON" Value="AppShortcutIcon.ico" />
 
     <Feature
