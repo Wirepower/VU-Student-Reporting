@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Product
+    Id="*"
+    Name="$(var.ProductName)"
+    Language="1033"
+    Version="$(var.ProductVersion)"
+    Manufacturer="$(var.Manufacturer)"
+    UpgradeCode="{B29284FC-31EF-4B9F-86F0-5DC1BFC6E51E}">
+    <Package
+      InstallerVersion="500"
+      Compressed="yes"
+      InstallScope="perMachine"
+      Platform="x64" />
+
+    <MajorUpgrade
+      DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Feature
+      Id="MainFeature"
+      Title="$(var.ProductName)"
+      Level="1">
+      <ComponentGroupRef Id="AppFiles" />
+    </Feature>
+  </Product>
+
+  <Fragment>
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFiles64Folder">
+        <Directory Id="INSTALLFOLDER" Name="Student Attendance Reporting" />
+      </Directory>
+    </Directory>
+  </Fragment>
+</Wix>
