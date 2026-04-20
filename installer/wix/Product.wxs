@@ -16,6 +16,8 @@
     <MajorUpgrade
       DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
     <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+    <Icon Id="AppShortcutIcon.ico" SourceFile="..\..\VU Support Hub_Desktop Icon-Favicon.ico" />
+    <Property Id="ARPPRODUCTICON" Value="AppShortcutIcon.ico" />
 
     <Feature
       Id="MainFeature"
@@ -47,6 +49,7 @@
         Id="DesktopShortcut"
         Name="Student Attendance Reporting"
         Description="Student Attendance Reporting"
+        Icon="AppShortcutIcon.ico"
         Target="[INSTALLFOLDER]Student Attendance Reporting.exe"
         WorkingDirectory="INSTALLFOLDER" />
       <RegistryValue
@@ -68,6 +71,7 @@
         Id="StartMenuShortcut"
         Name="Student Attendance Reporting"
         Description="Student Attendance Reporting"
+        Icon="AppShortcutIcon.ico"
         Target="[INSTALLFOLDER]Student Attendance Reporting.exe"
         WorkingDirectory="INSTALLFOLDER" />
       <RemoveFolder Id="ApplicationProgramsFolder" On="uninstall" />
