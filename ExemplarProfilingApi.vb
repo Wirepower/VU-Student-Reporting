@@ -8,6 +8,7 @@ Imports System.Net.Http.Headers
 Imports System.Reflection
 Imports System.Text
 Imports System.Text.Json
+Imports System.Text.RegularExpressions
 
 Public Class ExemplarProfileLookupResult
     Public Property IsSuccessful As Boolean
@@ -90,6 +91,8 @@ End Class
 Module ExemplarProfilingApi
     ''' <summary>Production API. Use the production login JAR with this URL. For staging, set EXEMPLAR_API_BASE_URL and use the staging JAR.</summary>
     Private Const DefaultBaseUrl As String = "https://api.profiling.exemplarsystems.com.au"
+    ''' <summary>The login JAR currently requires Java 11+ (class file version 55).</summary>
+    Private Const MinimumSupportedJavaMajorVersion As Integer = 11
     Private ReadOnly ApiClient As New HttpClient() With {
         .Timeout = TimeSpan.FromSeconds(20)
     }
@@ -1378,7 +1381,9 @@ Module ExemplarProfilingApi
             Try
                 Dim javaExe As String = GetJavaExecutablePath()
                 If String.IsNullOrWhiteSpace(javaExe) Then
-                    LastTokenRefreshError = "Java not found. Install Java or add a jre folder next to the app."
+                    If String.IsNullOrWhiteSpace(LastTokenRefreshError) Then
+                        LastTokenRefreshError = "Java not found. Install Java " & MinimumSupportedJavaMajorVersion.ToString() & "+ or add a compatible jre folder next to the app."
+                    End If
                     Return ""
                 End If
                 Using proc As New Process()
@@ -1405,6 +1410,15 @@ Module ExemplarProfilingApi
                         Return ""
                     End If
                     If proc.ExitCode <> 0 Then
+                        If errOut IsNot Nothing AndAlso errOut.IndexOf("UnsupportedClassVersionError", StringComparison.OrdinalIgnoreCase) >= 0 Then
+                            Dim detectedMajor As Integer = 0
+                            If TryGetJavaMajorVersion(javaExe, detectedMajor) Then
+                                LastTokenRefreshError = "Exemplar login requires Java " & MinimumSupportedJavaMajorVersion.ToString() & "+, but this machine is using Java " & detectedMajor.ToString() & ". Install or bundle Java " & MinimumSupportedJavaMajorVersion.ToString() & "+ (jre\bin\java.exe)."
+                            Else
+                                LastTokenRefreshError = "Exemplar login requires Java " & MinimumSupportedJavaMajorVersion.ToString() & "+. Install or bundle Java " & MinimumSupportedJavaMajorVersion.ToString() & "+ (jre\bin\java.exe)."
+                            End If
+                            Return ""
+                        End If
                         LastTokenRefreshError = "Login JAR failed (exit " & proc.ExitCode.ToString() & "). " & If(String.IsNullOrWhiteSpace(errOut), "Check username/password and staging vs production.", errOut.Trim())
                         Return ""
                     End If
@@ -1447,8 +1461,18 @@ Module ExemplarProfilingApi
         Return ""
     End Function
 
-    ''' <summary>Returns path to java.exe: bundled JRE (app dir or parent dirs), then JAVA_HOME, then common install folders (Java 25, Microsoft, Adoptium, etc.), then "java" (PATH).</summary>
+    ''' <summary>Returns Java executable path that satisfies minimum version, preferring bundled/runtime paths first.</summary>
     Private Function GetJavaExecutablePath() As String
+        Dim candidates As New List(Of String)()
+
+        Dim addCandidate As Action(Of String) =
+            Sub(path As String)
+                If String.IsNullOrWhiteSpace(path) Then Return
+                If Not candidates.Any(Function(existing) String.Equals(existing, path, StringComparison.OrdinalIgnoreCase)) Then
+                    candidates.Add(path)
+                End If
+            End Sub
+
         Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
         ' 1. Bundled JRE: next to exe, then parent folders (so jre in project root is found when running from bin\Debug\net8.0-windows)
         Dim dirsToCheck As New List(Of String) From {baseDir}
@@ -1462,16 +1486,16 @@ Module ExemplarProfilingApi
             If String.IsNullOrEmpty(dir) OrElse Not Directory.Exists(dir) Then Continue For
             For Each rel As String In New String() {"jre\bin\java.exe", "runtime\bin\java.exe", "jdk\bin\java.exe"}
                 Dim exe As String = Path.Combine(dir, rel)
-                If File.Exists(exe) Then Return exe
+                If File.Exists(exe) Then addCandidate(exe)
             Next
         Next
         ' 2. JAVA_HOME
         Dim javaHome As String = Environment.GetEnvironmentVariable("JAVA_HOME")?.Trim()
         If Not String.IsNullOrEmpty(javaHome) Then
             Dim exe As String = Path.Combine(javaHome, "bin", "java.exe")
-            If File.Exists(exe) Then Return exe
+            If File.Exists(exe) Then addCandidate(exe)
             exe = Path.Combine(javaHome, "jre", "bin", "java.exe")
-            If File.Exists(exe) Then Return exe
+            If File.Exists(exe) Then addCandidate(exe)
         End If
         ' 3. Common install locations (Java folder, Microsoft OpenJDK, Eclipse Adoptium - includes Java 25)
         For Each base As String In New String() {
@@ -1484,9 +1508,9 @@ Module ExemplarProfilingApi
                 Try
                     For Each subDir As String In Directory.GetDirectories(javaDir)
                         Dim exe As String = Path.Combine(subDir, "bin", "java.exe")
-                        If File.Exists(exe) Then Return exe
+                        If File.Exists(exe) Then addCandidate(exe)
                         exe = Path.Combine(subDir, "jre", "bin", "java.exe")
-                        If File.Exists(exe) Then Return exe
+                        If File.Exists(exe) Then addCandidate(exe)
                     Next
                 Catch
                     ' Ignore access or path errors
@@ -1494,7 +1518,121 @@ Module ExemplarProfilingApi
             Next
         Next
         ' 4. Fall back to system Java (must be on PATH)
-        Return "java"
+        addCandidate("java")
+
+        Dim bestCompatiblePath As String = ""
+        Dim bestCompatibleVersion As Integer = Integer.MinValue
+        Dim bestIncompatiblePath As String = ""
+        Dim bestIncompatibleVersion As Integer = Integer.MinValue
+
+        For Each candidate As String In candidates
+            Dim major As Integer
+            If Not TryGetJavaMajorVersion(candidate, major) Then
+                Continue For
+            End If
+
+            If major >= MinimumSupportedJavaMajorVersion Then
+                If major > bestCompatibleVersion Then
+                    bestCompatibleVersion = major
+                    bestCompatiblePath = candidate
+                End If
+            Else
+                If major > bestIncompatibleVersion Then
+                    bestIncompatibleVersion = major
+                    bestIncompatiblePath = candidate
+                End If
+            End If
+        Next
+
+        If Not String.IsNullOrWhiteSpace(bestCompatiblePath) Then
+            Return bestCompatiblePath
+        End If
+
+        If Not String.IsNullOrWhiteSpace(bestIncompatiblePath) Then
+            LastTokenRefreshError = "Exemplar login requires Java " & MinimumSupportedJavaMajorVersion.ToString() & "+, but detected Java " & bestIncompatibleVersion.ToString() & " at '" & bestIncompatiblePath & "'. Install or bundle Java " & MinimumSupportedJavaMajorVersion.ToString() & "+."
+        End If
+
+        Return ""
+    End Function
+
+    Private Function TryGetJavaMajorVersion(javaExecutable As String, ByRef majorVersion As Integer) As Boolean
+        majorVersion = 0
+
+        Try
+            Using proc As New Process()
+                proc.StartInfo.FileName = javaExecutable
+                proc.StartInfo.Arguments = "-version"
+                proc.StartInfo.UseShellExecute = False
+                proc.StartInfo.RedirectStandardOutput = True
+                proc.StartInfo.RedirectStandardError = True
+                proc.StartInfo.CreateNoWindow = True
+                proc.StartInfo.StandardOutputEncoding = Encoding.UTF8
+
+                proc.Start()
+                Dim stdOut As String = proc.StandardOutput.ReadToEnd()
+                Dim stdErr As String = proc.StandardError.ReadToEnd()
+                proc.WaitForExit(5000)
+                If Not proc.HasExited Then
+                    Try
+                        proc.Kill()
+                    Catch
+                    End Try
+                    Return False
+                End If
+
+                Dim combined As String = (If(stdOut, "") & vbLf & If(stdErr, "")).Trim()
+                If String.IsNullOrWhiteSpace(combined) Then
+                    Return False
+                End If
+
+                Dim major As Integer
+                If TryParseJavaMajorFromVersionText(combined, major) Then
+                    majorVersion = major
+                    Return True
+                End If
+            End Using
+        Catch
+            Return False
+        End Try
+
+        Return False
+    End Function
+
+    Private Function TryParseJavaMajorFromVersionText(versionText As String, ByRef majorVersion As Integer) As Boolean
+        majorVersion = 0
+        If String.IsNullOrWhiteSpace(versionText) Then Return False
+
+        ' Java 8 style: java version "1.8.0_421"
+        Dim legacyMatch As Match = Regex.Match(versionText, "(?:java|openjdk)\s+version\s+""1\.(\d+)")
+        If legacyMatch.Success Then
+            Dim parsedLegacy As Integer
+            If Integer.TryParse(legacyMatch.Groups(1).Value, parsedLegacy) Then
+                majorVersion = parsedLegacy
+                Return True
+            End If
+        End If
+
+        ' Java 9+ style: openjdk version "17.0.12" or java version "11.0.24"
+        Dim modernMatch As Match = Regex.Match(versionText, "(?:java|openjdk)\s+version\s+""(\d+)")
+        If modernMatch.Success Then
+            Dim parsedModern As Integer
+            If Integer.TryParse(modernMatch.Groups(1).Value, parsedModern) Then
+                majorVersion = parsedModern
+                Return True
+            End If
+        End If
+
+        ' Fallback: first leading integer in a quoted version.
+        Dim fallbackMatch As Match = Regex.Match(versionText, """(\d+)(?:\.\d+)*")
+        If fallbackMatch.Success Then
+            Dim parsedFallback As Integer
+            If Integer.TryParse(fallbackMatch.Groups(1).Value, parsedFallback) Then
+                majorVersion = parsedFallback
+                Return True
+            End If
+        End If
+
+        Return False
     End Function
 
     ''' <summary>True when EXEMPLAR_API_BASE_URL is set (staging/dev); then app uses ExemplarLoginDev.jar if present.</summary>
