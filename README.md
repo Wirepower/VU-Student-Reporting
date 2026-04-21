@@ -70,6 +70,20 @@ In practice, it combines attendance operations, communication templates, and pro
 - **External profiling system:** Exemplar APIs (token-based)
 - **Packaging:** WiX MSI + self-contained EXE release assets
 
+## Runtime dependencies included in GitHub Releases
+
+Release artifacts produced by `.github/workflows/release.yml` are designed to run after install with minimal machine prerequisites.
+
+Included in the MSI/EXE payload:
+
+- self-contained .NET runtime payload for the app
+- application DLLs/resources and embedded assets
+- portable **Temurin Java 17 JRE** under `jre\` for Exemplar login JAR compatibility
+
+Not bundled:
+
+- Microsoft Outlook / Excel (must already be installed for COM-backed email/Excel workflows)
+
 ## Branches
 
 - `master`: main development branch (kept in sync with `release` in this repository).
