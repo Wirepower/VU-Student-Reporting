@@ -1518,36 +1518,67 @@ Public Class StudentUnits
         ApplyLowAverageOverrideForCheckbox28And29()
     End Sub
     ''' <summary>Collects the form field position (page + rectangle) for a stamp so we can draw the image on top after flattening.</summary>
+    Private Shared Function NormalizeFieldKey(key As String) As String
+        If String.IsNullOrEmpty(key) Then Return ""
+        Return key.Replace(" "c, "").Replace("_"c, "").Replace("-"c, "").ToLowerInvariant()
+    End Function
+
+    Private Shared Function FieldKeyLikelyMatchesStamp(key As String, oneOrTwo As Integer) As Boolean
+        ' AcroForm names vary: "Stamp1", "Stamp 1", "Stamp-1", etc. (simple substring "Stamp1" does not find "Stamp 1".)
+        Dim t = NormalizeFieldKey(key)
+        If t.Length = 0 OrElse Not t.Contains("stamp") Then Return False
+        If oneOrTwo = 1 Then
+            If t = "stampl" Then Return True
+            Return t.Contains("stamp1") OrElse
+                (t.Length >= 6 AndAlso t.StartsWith("stamp", StringComparison.Ordinal) AndAlso t.Contains("1"c) AndAlso Not t.Contains("2"c))
+        End If
+        Return t.Contains("stamp2") OrElse
+            (t.Length >= 6 AndAlso t.StartsWith("stamp", StringComparison.Ordinal) AndAlso t.Contains("2"c) AndAlso Not t.Contains("1"c))
+    End Function
+
     Private Sub CollectStampPosition(form As AcroFields, fieldName As String, outPositions As List(Of Tuple(Of Integer, Rectangle)))
-        Try
-            Dim positions = form.GetFieldPositions(fieldName)
-            If positions Is Nothing OrElse positions.Count = 0 Then Return
-            Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
-            outPositions.Add(Tuple.Create(fp.page, fp.position))
-        Catch
-            ' Field may not exist or have different name (e.g. "Stamp 1"); try partial name match
+        Dim tryNames() As String
+        If String.Equals(fieldName, "Stamp1", StringComparison.OrdinalIgnoreCase) Then
+            tryNames = New String() {"Stamp1", "Stamp 1", "Stampl", "STAMP1", "stampl", "Stampl1"}
+        Else
+            tryNames = New String() {"Stamp2", "Stamp 2", "Stampl2", "STAMP2"}
+        End If
+        For Each tryName In tryNames
             Try
-                For Each key As String In form.Fields.Keys
-                    If key.IndexOf("Stamp1", StringComparison.OrdinalIgnoreCase) >= 0 AndAlso fieldName = "Stamp1" Then
-                        Dim positions = form.GetFieldPositions(key)
-                        If positions IsNot Nothing AndAlso positions.Count > 0 Then
-                            Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
-                            outPositions.Add(Tuple.Create(fp.page, fp.position))
-                            Return
-                        End If
-                    End If
-                    If key.IndexOf("Stamp2", StringComparison.OrdinalIgnoreCase) >= 0 AndAlso fieldName = "Stamp2" Then
-                        Dim positions = form.GetFieldPositions(key)
-                        If positions IsNot Nothing AndAlso positions.Count > 0 Then
-                            Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
-                            outPositions.Add(Tuple.Create(fp.page, fp.position))
-                            Return
-                        End If
-                    End If
-                Next
+                Dim positions = form.GetFieldPositions(tryName)
+                If positions IsNot Nothing AndAlso positions.Count > 0 Then
+                    Dim fp As AcroFields.FieldPosition = CType(positions(0), AcroFields.FieldPosition)
+                    outPositions.Add(Tuple.Create(fp.page, fp.position))
+                    Return
+                End If
             Catch
-                ' Ignore
             End Try
+        Next
+
+        Try
+            Dim positions2 = form.GetFieldPositions(fieldName)
+            If positions2 IsNot Nothing AndAlso positions2.Count > 0 Then
+                Dim fp0 As AcroFields.FieldPosition = CType(positions2(0), AcroFields.FieldPosition)
+                outPositions.Add(Tuple.Create(fp0.page, fp0.position))
+                Return
+            End If
+        Catch
+        End Try
+
+        Try
+            Dim wantOne As Integer = If(String.Equals(fieldName, "Stamp1", StringComparison.OrdinalIgnoreCase), 1, 2)
+            For Each key As String In form.Fields.Keys
+                If (wantOne = 1 AndAlso FieldKeyLikelyMatchesStamp(key, 1)) OrElse
+                   (wantOne = 2 AndAlso FieldKeyLikelyMatchesStamp(key, 2)) Then
+                    Dim positions3 = form.GetFieldPositions(key)
+                    If positions3 IsNot Nothing AndAlso positions3.Count > 0 Then
+                        Dim fp1 As AcroFields.FieldPosition = CType(positions3(0), AcroFields.FieldPosition)
+                        outPositions.Add(Tuple.Create(fp1.page, fp1.position))
+                        Return
+                    End If
+                End If
+            Next
+        Catch
         End Try
     End Sub
 
@@ -1589,6 +1620,16 @@ Public Class StudentUnits
             End If
         End Using
         Return ""
+    End Function
+
+    ''' <summary>Resolves LEATemplate.pdf next to the EXE (publish/install) with CWD fallback.</summary>
+    Private Function ResolveLeaTemplatePath() As String
+        Const fileName As String = "LEATemplate.pdf"
+        Dim baseDir As String = AppDomain.CurrentDomain.BaseDirectory
+        Dim inOutput As String = System.IO.Path.Combine(baseDir, fileName)
+        If File.Exists(inOutput) Then Return inOutput
+        If File.Exists(fileName) Then Return System.IO.Path.GetFullPath(fileName)
+        Return inOutput
     End Function
 
     Private Function GetVuStampPath(templatePath As String) As String
@@ -1643,7 +1684,7 @@ Public Class StudentUnits
 
     Public Function PopulatePdfWithParameters(Optional openGeneratedPdf As Boolean = True,
                                               Optional openArchiveFolder As Boolean = True) As String
-        Dim templatePath As String = "LEATemplate.pdf"
+        Dim templatePath As String = ResolveLeaTemplatePath()
         Dim outputDirectory As String = "P:\VUPoly\MT&T\IT, Electrical And Engineering\Submitted LEA Authorisation Forms"
         Dim Todaydate As String = DateTime.Today.ToString("ddMMyyyy")
         Dim fileName As String = MainFrm.StudentIDLBL.Text & "_" & MainFrm.StudentFirstnameLBL.Text & "_" & MainFrm.StudentSurnameLBL.Text & "_" & Todaydate & ".pdf"

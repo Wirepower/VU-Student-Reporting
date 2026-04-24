@@ -90,6 +90,13 @@
     <None Update="LEATemplate.pdf">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <!-- Must sit next to LEATemplate.pdf in publish/install output; GetVuStampPath() loads from BaseDirectory. -->
+    <None Update="VU Stamp.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="VU Stamp.jpg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="ExemplarLogin.jar">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
