@@ -4,11 +4,35 @@ on:
   push:
     branches:
       - release
+    paths-ignore:
+      - "docs/**"
+      - "**/*.md"
+      - ".github/workflows/release.yml"
   workflow_dispatch:
     inputs:
       version:
         description: 'Optional explicit release version in vX.Y format (example: v3.1)'
         required: false
+      force_update:
+        description: 'Set to true for mandatory update behavior'
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
+      min_required_tag:
+        description: 'Optional minimum client version in vX.Y format (example: v3.0)'
+        required: false
+        default: ""
+      asset_name:
+        description: 'Preferred installer asset for in-app updater'
+        required: false
+        default: "StudentAttendanceReporting-Setup.msi"
+      release_notes:
+        description: 'Optional release highlights shown above OTA metadata'
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -109,6 +133,67 @@ jobs:
           "version=$version" >> $env:GITHUB_OUTPUT
           "installer_version=$installerVersion" >> $env:GITHUB_OUTPUT
 
+      - name: Build release notes and OTA metadata
+        id: release_meta
+        shell: pwsh
+        env:
+          FORCE_UPDATE_INPUT: ${{ github.event.inputs.force_update }}
+          MIN_REQUIRED_TAG_INPUT: ${{ github.event.inputs.min_required_tag }}
+          ASSET_NAME_INPUT: ${{ github.event.inputs.asset_name }}
+          RELEASE_NOTES_INPUT: ${{ github.event.inputs.release_notes }}
+        run: |
+          $forceUpdate = "$env:FORCE_UPDATE_INPUT".Trim().ToLowerInvariant()
+          if (-not $forceUpdate) {
+            $forceUpdate = "false"
+          }
+          if ($forceUpdate -notin @("true", "false")) {
+            throw "force_update must be true or false."
+          }
+
+          $minRequiredTag = "$env:MIN_REQUIRED_TAG_INPUT".Trim()
+          if ($minRequiredTag -and $minRequiredTag -notmatch '^v\d+\.\d+$') {
+            throw "min_required_tag must match vX.Y (example: v3.0)."
+          }
+
+          $assetName = "$env:ASSET_NAME_INPUT".Trim()
+          if (-not $assetName) {
+            $assetName = "StudentAttendanceReporting-Setup.msi"
+          }
+
+          $releaseNotes = "$env:RELEASE_NOTES_INPUT".Trim()
+
+          $bodyDir = "publish/release-artifacts"
+          New-Item -ItemType Directory -Path $bodyDir -Force | Out-Null
+          $bodyPath = Join-Path $bodyDir "release-notes.md"
+
+          $lines = New-Object System.Collections.Generic.List[string]
+          $lines.Add("## Release highlights")
+          $lines.Add("")
+          if ($releaseNotes) {
+            $lines.Add($releaseNotes)
+          } else {
+            $lines.Add("- Automated release build from `release` branch.")
+          }
+          $lines.Add("")
+          $lines.Add("## OTA policy metadata")
+          $lines.Add("")
+          $lines.Add("# force_update: true = mandatory update when this release is newer than installed version.")
+          $lines.Add("force_update=$forceUpdate")
+          $lines.Add("")
+          $lines.Add("# min_required_tag: clients below this version must update before continuing.")
+          if ($minRequiredTag) {
+            $lines.Add("min_required_tag=$minRequiredTag")
+          } else {
+            $lines.Add("# min_required_tag not set")
+          }
+          $lines.Add("")
+          $lines.Add("# asset_name: preferred installer asset selected by in-app updater.")
+          $lines.Add("asset_name=$assetName")
+
+          Set-Content -Path $bodyPath -Value ($lines -join "`n") -Encoding UTF8
+
+          "body_path=$bodyPath" >> $env:GITHUB_OUTPUT
+
       - name: Publish self-contained EXE payload
         shell: pwsh
         run: |
@@ -165,7 +250,8 @@ jobs:
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
-          generate_release_notes: true
+          body_path: ${{ steps.release_meta.outputs.body_path }}
+          generate_release_notes: false
           make_latest: true
           files: |
             publish/release-artifacts/StudentAttendanceReporting.exe

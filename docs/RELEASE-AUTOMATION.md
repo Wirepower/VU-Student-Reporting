@@ -4,8 +4,32 @@ This repository supports automated release publishing from the `release` branch.
 
 ## What triggers a release
 
-- Any push to the `release` branch runs `.github/workflows/release.yml`.
+- Pushes to the `release` branch run `.github/workflows/release.yml` for application/release content changes.
+- Markdown/docs-only updates and direct edits to the release workflow file are ignored on push (to avoid accidental release publishes).
 - You can also run it manually from **Actions** using `workflow_dispatch`.
+
+## Manual release prompts (workflow_dispatch)
+
+When running manually from Actions, the workflow now asks for:
+
+- `version` (optional `vX.Y`; if blank, next minor is auto-selected)
+- `force_update` (`true` or `false`)
+- `min_required_tag` (optional `vX.Y`)
+- `asset_name` (preferred installer file name for in-app updater)
+- `release_notes` (optional plain-text highlights)
+
+The workflow writes these values into the GitHub Release body as OTA metadata:
+
+```text
+# force_update: true = mandatory update when this release is newer than installed version.
+force_update=true
+
+# min_required_tag: clients below this version must update before continuing.
+min_required_tag=v3.0
+
+# asset_name: preferred installer asset selected by in-app updater.
+asset_name=StudentAttendanceReporting-Setup.msi
+```
 
 ## What the workflow does
 
@@ -16,7 +40,7 @@ This repository supports automated release publishing from the `release` branch.
 2. Publishes a self-contained `win-x64` application payload (`.exe`) using `build/Publish-ForInstaller.ps1`.
 3. Builds `StudentAttendanceReporting-Setup.msi` via WiX using `build/Build-WixMsi.ps1`.
 4. Creates and pushes the tag.
-5. Publishes or updates the GitHub Release with both assets:
+5. Publishes or updates the GitHub Release with both assets and OTA metadata:
    - `StudentAttendanceReporting.exe`
    - `StudentAttendanceReporting-Setup.msi`
 
