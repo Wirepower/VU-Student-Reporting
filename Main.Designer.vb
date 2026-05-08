@@ -27,7 +27,6 @@ Partial Class MainFrm
         Label1 = New Label()
         Button1 = New Button()
         Button2 = New Button()
-        Button3 = New Button()
         BlockGroupCB = New ComboBox()
         Label2 = New Label()
         Button4 = New Button()
@@ -152,18 +151,6 @@ Partial Class MainFrm
         Button2.TabIndex = 2
         Button2.Text = "Exit"
         Button2.UseVisualStyleBackColor = True
-        ' 
-        ' Button3
-        ' 
-        Button3.Font = New Font("Segoe UI", 12F)
-        Button3.Location = New Point(1103, 306)
-        Button3.Margin = New Padding(4)
-        Button3.Name = "Button3"
-        Button3.Size = New Size(170, 53)
-        Button3.TabIndex = 3
-        Button3.Text = "Student Amendment Request"
-        Button3.UseVisualStyleBackColor = True
-        Button3.Visible = False
         ' 
         ' BlockGroupCB
         ' 
@@ -1108,12 +1095,15 @@ Partial Class MainFrm
         ' 
         ' Button12
         ' 
+        Button12.Font = New Font("Segoe UI", 12F)
         Button12.Location = New Point(1103, 306)
+        Button12.Margin = New Padding(4)
         Button12.Name = "Button12"
         Button12.Size = New Size(170, 53)
         Button12.TabIndex = 105
         Button12.Text = "Student Re-Allocation Request"
         Button12.UseVisualStyleBackColor = True
+        Button12.Visible = False
         ' 
         ' Label40
         ' 
@@ -1224,7 +1214,6 @@ Partial Class MainFrm
         Controls.Add(Button4)
         Controls.Add(Label2)
         Controls.Add(BlockGroupCB)
-        Controls.Add(Button3)
         Controls.Add(Button2)
         Controls.Add(Button1)
         Controls.Add(Label1)
@@ -1242,7 +1231,6 @@ Partial Class MainFrm
     Friend WithEvents Label1 As Label
     Friend WithEvents Button1 As Button
     Friend WithEvents Button2 As Button
-    Friend WithEvents Button3 As Button
     Friend WithEvents BlockGroupCB As ComboBox
     Friend WithEvents Label2 As Label
     Friend WithEvents Button4 As Button

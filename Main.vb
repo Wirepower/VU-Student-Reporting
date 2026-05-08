@@ -209,7 +209,6 @@ Public Class MainFrm
 
             Button8.Visible = False
             Button7.Visible = False
-            Button3.Visible = False
             System.Windows.Forms.Application.DoEvents()
             currentStep = 90
             ' Update progress bar to reflect current progress
@@ -385,7 +384,7 @@ Public Class MainFrm
         Button2.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         Button9.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         MassEmailBtn.Anchor = AnchorStyles.Top Or AnchorStyles.Right
-        Button3.Anchor = AnchorStyles.Top Or AnchorStyles.Right
+        Button12.Anchor = AnchorStyles.Top Or AnchorStyles.Right
         Button10.Anchor = AnchorStyles.Top Or AnchorStyles.Right
 
         ' ---- Top-left: logo and DB date ----
@@ -828,10 +827,6 @@ Public Class MainFrm
         Else
             MsgBox(Version & " is the current and latest version." & vbCrLf & "Your screen resolution is " & Format(w, "#,##0") & " x " & Format(h, "#,##0"), vbInformation, "Monitor Size (width x height)")
         End If
-    End Sub
-
-    Private Sub Button3_Click(sender As Object, e As EventArgs) Handles Button3.Click
-        StudentAmendment.Show()
     End Sub
 
     Private Sub Button5_Click(sender As Object, e As EventArgs) Handles Button5.Click
@@ -1548,7 +1543,6 @@ Public Class MainFrm
         Label17.Visible = True
         Label23.Visible = True
         Label21.Visible = True
-        Button3.Visible = True
         Button10.Visible = True
         Label5.Visible = True
         ComboBox12.Visible = True
@@ -1884,7 +1878,7 @@ Public Class MainFrm
             NotesTB.Visible = True
             Button8.Visible = True
             Label35.Visible = False
-            'Button3.Visible = False
+            'Button12.Visible = False
             'Button10.Visible = False
             Button7.Visible = False
             ' If GetLastReportDate(studentID) Is Nothing Then
@@ -1924,7 +1918,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -1958,7 +1952,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -1992,7 +1986,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2026,7 +2020,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2060,7 +2054,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            Button3.Visible = True
+            Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2094,7 +2088,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2128,7 +2122,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2162,7 +2156,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2197,7 +2191,7 @@ Public Class MainFrm
             NotesTB.Visible = True
             Button8.Visible = True
             Label35.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
         ElseIf ComboBox12.Text = "Early Departure Notice" Then
@@ -2230,7 +2224,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = True
@@ -2264,7 +2258,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = True
@@ -2298,7 +2292,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2332,7 +2326,7 @@ Public Class MainFrm
             Label32.Visible = False
             NotesTB.Visible = False
             Button8.Visible = False
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = True
             Label35.Visible = False
@@ -2366,7 +2360,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2432,7 +2426,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            'Button3.Visible = True
+            'Button12.Visible = True
             'Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
@@ -2466,7 +2460,7 @@ Public Class MainFrm
             Label32.Visible = True
             NotesTB.Visible = True
             Button8.Visible = True
-            Button3.Visible = False
+            Button12.Visible = False
             Button10.Visible = False
             Button7.Visible = False
             Label35.Visible = False
