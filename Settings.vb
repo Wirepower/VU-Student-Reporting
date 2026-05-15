@@ -1,4 +1,4 @@
-﻿Imports Microsoft.Data.SqlClient
+Imports Microsoft.Data.SqlClient
 Imports Microsoft.VisualBasic.FileIO
 Imports System.Data.SqlClient
 Imports System.IO
@@ -192,7 +192,7 @@ Public Class Settings
                           MAX(CASE WHEN units = 'UEEEL0005' THEN 1 ELSE 0 END) AS UEEEL0005,
                           MAX(CASE WHEN units = 'UEECD0016' THEN 1 ELSE 0 END) AS UEECD0016,
                           MAX(CASE WHEN units = 'UEEEL0047' THEN 1 ELSE 0 END) AS UEEEL0047,
-                          MAX(CASE WHEN units = 'HTLTAID009' THEN 1 ELSE 0 END) AS HTLTAID009,
+                          MAX(CASE WHEN units = 'HLTAID009' THEN 1 ELSE 0 END) AS HLTAID009,
                           MAX(CASE WHEN units = 'UETDRRF004' THEN 1 ELSE 0 END) AS UETDRRF004,
                           MAX(CASE WHEN units = 'UEEEL0012' THEN 1 ELSE 0 END) AS UEEEL0012,
                           MAX(CASE WHEN units = 'UEEEL0014' THEN 1 ELSE 0 END) AS UEEEL0014,
@@ -226,14 +226,14 @@ Public Class Settings
                     target.UEEEL0005 = source.UEEEL0005,
                     target.UEECD0016 = source.UEECD0016,
                     target.UEEEL0047 = source.UEEEL0047,
-                    target.HTLTAID009 = source.HTLTAID009,
+                    target.HLTAID009 = source.HLTAID009,
                     target.UETDRRF004 = source.UETDRRF004,
                     target.UEEEL0012 = source.UEEEL0012,
                     target.UEEEL0014 = source.UEEEL0014,
                     target.UEEEL0039 = source.UEEEL0039
             WHEN NOT MATCHED BY TARGET THEN
-                INSERT ([Student ID], UEECO0023, UEECD0007, UEECD0019, UEECD0020, UEECD0051, UEECD0046, UEECD0044, UEEEL0021, UEEEL0019, UEERE0001, UEEEL0023, UEEEL0020, UEEEL0025, UEEEL0024, UEEEL0008, UEEEL0009, UEEEL0010, UEEDV0005, UEEDV0008, UEEEL0003, UEEEL0018, UEEEL0005, UEECD0016, UEEEL0047, HTLTAID009, UETDRRF004, UEEEL0012, UEEEL0014, UEEEL0039)
-                VALUES (source.[Student ID], source.UEECO0023, source.UEECD0007, source.UEECD0019, source.UEECD0020, source.UEECD0051, source.UEECD0046, source.UEECD0044, source.UEEEL0021, source.UEEEL0019, source.UEERE0001, source.UEEEL0023, source.UEEEL0020, source.UEEEL0025, source.UEEEL0024, source.UEEEL0008, source.UEEEL0009, source.UEEEL0010, source.UEEDV0005, source.UEEDV0008, source.UEEEL0003, source.UEEEL0018, source.UEEEL0005, source.UEECD0016, source.UEEEL0047, source.HTLTAID009, source.UETDRRF004, source.UEEEL0012, source.UEEEL0014, source.UEEEL0039);"
+                INSERT ([Student ID], UEECO0023, UEECD0007, UEECD0019, UEECD0020, UEECD0051, UEECD0046, UEECD0044, UEEEL0021, UEEEL0019, UEERE0001, UEEEL0023, UEEEL0020, UEEEL0025, UEEEL0024, UEEEL0008, UEEEL0009, UEEEL0010, UEEDV0005, UEEDV0008, UEEEL0003, UEEEL0018, UEEEL0005, UEECD0016, UEEEL0047, HLTAID009, UETDRRF004, UEEEL0012, UEEEL0014, UEEEL0039)
+                VALUES (source.[Student ID], source.UEECO0023, source.UEECD0007, source.UEECD0019, source.UEECD0020, source.UEECD0051, source.UEECD0046, source.UEECD0044, source.UEEEL0021, source.UEEEL0019, source.UEERE0001, source.UEEEL0023, source.UEEEL0020, source.UEEEL0025, source.UEEEL0024, source.UEEEL0008, source.UEEEL0009, source.UEEEL0010, source.UEEDV0005, source.UEEDV0008, source.UEEEL0003, source.UEEEL0018, source.UEEEL0005, source.UEECD0016, source.UEEEL0047, source.HLTAID009, source.UETDRRF004, source.UEEEL0012, source.UEEEL0014, source.UEEEL0039);"
 
         currentStep = 90
         ' Update progress bar to reflect current progress
@@ -514,8 +514,8 @@ Public Class Settings
                 UEEEL0047 = CASE WHEN EXISTS (
                     SELECT 1 FROM StudentUnitsDatabase WHERE StudentUnitsDatabase.[Student ID] = StudentLogs.[Student ID] AND StudentUnitsDatabase.Units = 'UEEEL0047'
                 ) THEN 1 ELSE 0 END,
-                HTLTAID009 = CASE WHEN EXISTS (
-                    SELECT 1 FROM StudentUnitsDatabase WHERE StudentUnitsDatabase.[Student ID] = StudentLogs.[Student ID] AND StudentUnitsDatabase.Units = 'HTLTAID009'
+                HLTAID009 = CASE WHEN EXISTS (
+                    SELECT 1 FROM StudentUnitsDatabase WHERE StudentUnitsDatabase.[Student ID] = StudentLogs.[Student ID] AND StudentUnitsDatabase.Units = 'HLTAID009'
                 ) THEN 1 ELSE 0 END,
                 UETDRRF004 = CASE WHEN EXISTS (
                     SELECT 1 FROM StudentUnitsDatabase WHERE StudentUnitsDatabase.[Student ID] = StudentLogs.[Student ID] AND StudentUnitsDatabase.Units = 'UETDRRF004'
@@ -535,7 +535,7 @@ Public Class Settings
             );
 
             -- Insert new rows into StudentLogs table for student IDs not already present
-            INSERT INTO StudentLogs ([Student ID], UEECO0023, UEECD0007, UEECD0019, UEECD0020, UEECD0051, UEECD0046, UEECD0044, UEEEL0021, UEEEL0019, UEERE0001, UEEEL0023, UEEEL0020, UEEEL0025, UEEEL0024, UEEEL0008, UEEEL0009, UEEEL0010, UEEDV0005, UEEDV0008, UEEEL0003, UEEEL0018, UEEEL0005, UEECD0016, UEEEL0047, HTLTAID009, UETDRRF004, UEEEL0012, UEEEL0014, UEEEL0039)
+            INSERT INTO StudentLogs ([Student ID], UEECO0023, UEECD0007, UEECD0019, UEECD0020, UEECD0051, UEECD0046, UEECD0044, UEEEL0021, UEEEL0019, UEERE0001, UEEEL0023, UEEEL0020, UEEEL0025, UEEEL0024, UEEEL0008, UEEEL0009, UEEEL0010, UEEDV0005, UEEDV0008, UEEEL0003, UEEEL0018, UEEEL0005, UEECD0016, UEEEL0047, HLTAID009, UETDRRF004, UEEEL0012, UEEEL0014, UEEEL0039)
             SELECT DISTINCT [Student ID],
                 CASE WHEN Units = 'UEECO0023' THEN 1 ELSE 0 END,
                 CASE WHEN Units = 'UEECD0007' THEN 1 ELSE 0 END,
@@ -561,7 +561,7 @@ Public Class Settings
                 CASE WHEN Units = 'UEEEL0005' THEN 1 ELSE 0 END,
                 CASE WHEN Units = 'UEECD0016' THEN 1 ELSE 0 END,
                 CASE WHEN Units = 'UEEEL0047' THEN 1 ELSE 0 END,
-                CASE WHEN Units = 'HTLTAID009' THEN 1 ELSE 0 END,
+                CASE WHEN Units = 'HLTAID009' THEN 1 ELSE 0 END,
                 CASE WHEN Units = 'UETDRRF004' THEN 1 ELSE 0 END,
                 CASE WHEN Units = 'UEEEL0012' THEN 1 ELSE 0 END,
                 CASE WHEN Units = 'UEEEL0014' THEN 1 ELSE 0 END,
@@ -668,27 +668,7 @@ Public Class Settings
     End Sub
 
     Sub FilterDataSet(dataSet As DataSet)
-        ' Apply filtering conditions using LINQ
-        Dim filteredRows = From row In dataSet.Tables(0).AsEnumerable()
-                           Where row.Field(Of String)("Grade Code") = "CBC" Or
-                             row.Field(Of String)("Grade Code") = "PP" Or
-                             row.Field(Of String)("Grade Code") = "GC" Or
-                             row.Field(Of String)("Student Study Package Status") = "Credited" Or
-                             row.Field(Of String)("Student Study Package Status") = "Passed" Or
-                             row.Field(Of String)("Student Study Package Status") = "Exempt" Or
-                            (row.Field(Of String)("Student Study Package Status") = "Enrolled" AndAlso
-                             row.Field(Of String)("Grade Code") = "CBC")
-                           Select row
-
-        ' Create a new DataTable with filtered rows
-        Dim filteredDataTable As DataTable = dataSet.Tables(0).Clone()
-        For Each filteredRow In filteredRows
-            filteredDataTable.ImportRow(filteredRow)
-        Next
-
-        ' Replace the original DataTable with the filtered one
-        dataSet.Tables.Clear()
-        dataSet.Tables.Add(filteredDataTable)
+        CsvStudentUnitsFilter.FilterDataSetForStudentUnitsUpload(dataSet)
     End Sub
 
     Sub UploadToDatabase(dataSet As DataSet)
@@ -707,8 +687,8 @@ Public Class Settings
             Dim insertCommand As New SqlCommand("INSERT INTO ElectrotechnologyReports.dbo.StudentUnitsDatabase ([Student ID], [units]) VALUES (@StudentID, @Units)", connection)
             For Each row As DataRow In dataSet.Tables(0).Rows
                 insertCommand.Parameters.Clear()
-                insertCommand.Parameters.AddWithValue("@StudentID", row("Student ID"))
-                insertCommand.Parameters.AddWithValue("@Units", row("Study Package Code"))
+                insertCommand.Parameters.AddWithValue("@StudentID", SQLCon.NormalizeStudentIdForLogs(row("Student ID")))
+                insertCommand.Parameters.AddWithValue("@Units", CsvStudentUnitsFilter.CsvCellTrim(row, "Study Package Code"))
                 insertCommand.ExecuteNonQuery()
             Next
 

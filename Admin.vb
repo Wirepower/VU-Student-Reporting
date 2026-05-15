@@ -1,4 +1,4 @@
-﻿Imports Microsoft.Data.SqlClient
+Imports Microsoft.Data.SqlClient
 Imports Microsoft.Office.Server.Search.Administration
 Imports Microsoft.SharePoint.Portal.WebControls
 Imports Microsoft.VisualBasic.FileIO
@@ -72,7 +72,7 @@ Public Class Admin
 
         ' Loop through each row in the dataset
         For Each row As DataRow In dataSet.Tables(0).Rows
-            Dim studentID As String = row("Student ID").ToString()
+            Dim studentID As String = SQLCon.NormalizeStudentIdForLogs(row("Student ID"))
             Dim addressLine As String = row("Contact Student Address Line 1").ToString()
             Dim suburb As String = row("Contact Suburb/Town").ToString()
             Dim state As String = row("Contact State").ToString()
@@ -179,27 +179,7 @@ Public Class Admin
     End Sub
 
     Sub FilterDataSet(dataSet As DataSet)
-        ' Apply filtering conditions using LINQ
-        Dim filteredRows = From row In dataSet.Tables(0).AsEnumerable()
-                           Where row.Field(Of String)("Grade Code") = "CBC" Or
-                             row.Field(Of String)("Grade Code") = "PP" Or
-                             row.Field(Of String)("Grade Code") = "GC" Or
-                             row.Field(Of String)("Student Study Package Status") = "Credited" Or
-                             row.Field(Of String)("Student Study Package Status") = "Passed" Or
-                             row.Field(Of String)("Student Study Package Status") = "Exempt" Or
-                            (row.Field(Of String)("Student Study Package Status") = "Enrolled" AndAlso
-                             row.Field(Of String)("Grade Code") = "CBC")
-                           Select row
-
-        ' Create a new DataTable with filtered rows
-        Dim filteredDataTable As DataTable = dataSet.Tables(0).Clone()
-        For Each filteredRow In filteredRows
-            filteredDataTable.ImportRow(filteredRow)
-        Next
-
-        ' Replace the original DataTable with the filtered one
-        dataSet.Tables.Clear()
-        dataSet.Tables.Add(filteredDataTable)
+        CsvStudentUnitsFilter.FilterDataSetForStudentUnitsUpload(dataSet)
     End Sub
 
     Sub UploadToDatabase(dataSet As DataSet)
@@ -218,8 +198,8 @@ Public Class Admin
             Dim insertCommand As New SqlCommand("INSERT INTO ElectrotechnologyReports.dbo.StudentUnitsDatabase ([Student ID], [units]) VALUES (@StudentID, @Units)", connection)
             For Each row As DataRow In dataSet.Tables(0).Rows
                 insertCommand.Parameters.Clear()
-                insertCommand.Parameters.AddWithValue("@StudentID", row("Student ID"))
-                insertCommand.Parameters.AddWithValue("@Units", row("Study Package Code"))
+                insertCommand.Parameters.AddWithValue("@StudentID", SQLCon.NormalizeStudentIdForLogs(row("Student ID")))
+                insertCommand.Parameters.AddWithValue("@Units", CsvStudentUnitsFilter.CsvCellTrim(row, "Study Package Code"))
                 insertCommand.ExecuteNonQuery()
             Next
 
