@@ -73,9 +73,9 @@ Partial Class LoadingForm
         Label3.AutoSize = True
         Label3.Location = New Point(245, 285)
         Label3.Name = "Label3"
-        Label3.Size = New Size(126, 15)
+        Label3.Size = New Size(179, 15)
         Label3.TabIndex = 4
-        Label3.Text = "Created by Frank Offer"
+        Label3.Text = "Copyright © 2026 by Frank Offer"
         ' 
         ' LoadingForm
         ' 

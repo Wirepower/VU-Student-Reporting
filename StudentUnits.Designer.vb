@@ -170,7 +170,7 @@ Partial Class StudentUnits
         ' SelectedStudentLBL
         ' 
         SelectedStudentLBL.BackColor = Color.FromArgb(CByte(255), CByte(255), CByte(192))
-        SelectedStudentLBL.Font = New Font("Segoe UI", 12.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        SelectedStudentLBL.Font = New Font("Segoe UI", 12F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         SelectedStudentLBL.ForeColor = Color.Red
         SelectedStudentLBL.Location = New Point(8, 20)
         SelectedStudentLBL.Margin = New Padding(4, 0, 4, 0)
@@ -197,7 +197,7 @@ Partial Class StudentUnits
         Label3.Name = "Label3"
         Label3.Size = New Size(179, 15)
         Label3.TabIndex = 55
-        Label3.Text = "Copyright © 2024 by Frank Offer"
+        Label3.Text = "Copyright © 2026 by Frank Offer"
         ' 
         ' PictureBox1
         ' 
@@ -224,7 +224,7 @@ Partial Class StudentUnits
         ' Label1
         ' 
         Label1.AutoSize = True
-        Label1.Font = New Font("Segoe UI", 24.0F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
+        Label1.Font = New Font("Segoe UI", 24F, FontStyle.Regular, GraphicsUnit.Point, CByte(0))
         Label1.Location = New Point(609, 25)
         Label1.Margin = New Padding(4, 0, 4, 0)
         Label1.Name = "Label1"
@@ -234,7 +234,7 @@ Partial Class StudentUnits
         ' 
         ' UnitAlertLbl1
         ' 
-        UnitAlertLbl1.Font = New Font("Segoe UI", 18.0F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
+        UnitAlertLbl1.Font = New Font("Segoe UI", 18F, FontStyle.Bold, GraphicsUnit.Point, CByte(0))
         UnitAlertLbl1.ForeColor = Color.Red
         UnitAlertLbl1.Location = New Point(507, 115)
         UnitAlertLbl1.Name = "UnitAlertLbl1"
@@ -1392,7 +1392,7 @@ Partial Class StudentUnits
         ' 
         ' StudentUnits
         ' 
-        AutoScaleDimensions = New SizeF(96.0F, 96.0F)
+        AutoScaleDimensions = New SizeF(96F, 96F)
         AutoScaleMode = AutoScaleMode.Dpi
         AutoScroll = True
         BackColor = SystemColors.GradientActiveCaption

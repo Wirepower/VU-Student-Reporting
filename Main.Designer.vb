@@ -202,7 +202,7 @@ Partial Class MainFrm
         Label3.Name = "Label3"
         Label3.Size = New Size(241, 21)
         Label3.TabIndex = 8
-        Label3.Text = "Copyright © 2024 by Frank Offer"
+        Label3.Text = "Copyright © 2026 by Frank Offer"
         ' 
         ' StudentCB
         ' 
