@@ -23,7 +23,34 @@ Public Class StudentUnits
     Private autoProfilingRetryAttempted As Boolean = False
     Private postShowAutoAttemptDone As Boolean = False
     Private profilingLoadInProgress As Boolean = False
+    ''' <summary>When false, LEA controls stay hidden until initial profiling cycle finishes (Load + Shown).</summary>
+    Private profilingDependentUiReady As Boolean = True
 
+    ''' <summary>UEEDV units require 50% min EXP/DEMO; at or above 50% they are excluded from Label13 average. Below 50% blocks LEA like failing 85%/100%.</summary>
+    Private Shared ReadOnly ReducedProfilingThresholdUnitCodes As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase) From {
+        "UEEDV0005", "UEEDV0008"
+    }
+    Private Const ReducedProfilingThresholdPercent As Double = 50.0
+    Private Const StandardProfilingThresholdPercent As Double = 100.0
+
+    Private Shared Function GetProfilingThresholdForUnit(unitCode As String) As Double
+        If ReducedProfilingThresholdUnitCodes.Contains(unitCode) Then
+            Return ReducedProfilingThresholdPercent
+        End If
+        Return StandardProfilingThresholdPercent
+    End Function
+
+    Private Shared Function IsProfilingLabelExcludedFromAverage(labelName As String) As Boolean
+        If String.IsNullOrWhiteSpace(labelName) Then Return False
+        For Each code As String In ReducedProfilingThresholdUnitCodes
+            If labelName.StartsWith(code, StringComparison.OrdinalIgnoreCase) AndAlso
+               (labelName.EndsWith("EXP", StringComparison.OrdinalIgnoreCase) OrElse
+                labelName.EndsWith("DEMO", StringComparison.OrdinalIgnoreCase)) Then
+                Return True
+            End If
+        Next
+        Return False
+    End Function
 
 
     Private Sub CloseBTN_Click(sender As Object, e As EventArgs) Handles CloseBTN.Click
@@ -566,7 +593,6 @@ Public Class StudentUnits
         UpdateLabelsFromDatabase(MainFrm.StudentIDLBL.Text)
         MainFrm.UnitAlertLbl.Refresh()
         UnitAlertLbl1.Refresh()
-        UpdateButtonVisibility()
         PopulateTeacherCombo()
         UpdateLabelWithDatabaseDate()
         If ExemplarProfilingApi.IsConfigured() Then
@@ -578,16 +604,11 @@ Public Class StudentUnits
         'Enable below once Address column is working in SQL database
         TextBox1.Text = MainFrm.Label28.Text
         '-------------------------------------------------------------
-        If CheckBox27.Checked And CheckBox29.Checked Then
-            CheckBox41.Visible = True
-
-        Else
-            CheckBox41.Visible = False
-
-        End If
 
         ' Auto-load per-unit profiling percentages when the form opens.
         If ExemplarProfilingApi.IsConfigured() AndAlso unitCheckBoxes.Count > 0 Then
+            profilingDependentUiReady = False
+            HideLeaControlsPendingProfiling()
             hasLoadedStudentProfiling = False
             autoProfilingRetryAttempted = False
             postShowAutoAttemptDone = False
@@ -609,6 +630,8 @@ Public Class StudentUnits
                     SetProfilingSummary("Profiling API currently unavailable. Using current checkbox/SQL state only.", Color.Maroon)
                 End If
             End If
+        Else
+            UpdateButtonVisibility()
         End If
 
     End Sub
@@ -620,9 +643,13 @@ Public Class StudentUnits
         postShowAutoAttemptDone = True
 
         If hasLoadedStudentProfiling Then
+            profilingDependentUiReady = True
+            UpdateButtonVisibility()
             Return
         End If
         If Not ExemplarProfilingApi.IsConfigured() OrElse unitCheckBoxes.Count = 0 Then
+            profilingDependentUiReady = True
+            UpdateButtonVisibility()
             Return
         End If
 
@@ -652,6 +679,9 @@ Public Class StudentUnits
             LogProfilingAvailabilityIssue("Post-open profiling attempts (3) did not complete.")
             SetProfilingSummary("Profiling API currently unavailable. Using current checkbox/SQL state only.", Color.Maroon)
         End If
+
+        profilingDependentUiReady = True
+        UpdateButtonVisibility()
     End Sub
 
     Private Async Function WaitForProfilingLoadIdleAsync(Optional timeoutMs As Integer = 15000) As Task
@@ -687,6 +717,7 @@ Public Class StudentUnits
         End If
 
         profilingLoadInProgress = True
+        HideLeaControlsPendingProfiling()
         Try
             Cursor = Cursors.WaitCursor
             Dim studentId As String = MainFrm.StudentIDLBL.Text?.Trim()
@@ -967,13 +998,15 @@ Public Class StudentUnits
             Dim expValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "EXP")
             Dim demoValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "DEMO")
 
-            ' Include N/A (unparseable / missing) on either side. Only exclude when BOTH metrics are
-            ' known and each is at least 100% (nothing "under 100" and no unknowns).
-            Dim bothAtOrAbove100 As Boolean =
-                expValue.HasValue AndAlso demoValue.HasValue AndAlso
-                expValue.Value >= 100.0 AndAlso demoValue.Value >= 100.0
+            Dim threshold As Double = GetProfilingThresholdForUnit(code)
 
-            If Not bothAtOrAbove100 Then
+            ' Include N/A (unparseable / missing) on either side. Only exclude when BOTH metrics are
+            ' known and each meets the unit threshold (100% default; 50% for UEEDV0005/UEEDV0008).
+            Dim bothAtOrAboveThreshold As Boolean =
+                expValue.HasValue AndAlso demoValue.HasValue AndAlso
+                expValue.Value >= threshold AndAlso demoValue.Value >= threshold
+
+            If Not bothAtOrAboveThreshold Then
                 underTarget.Add(code)
             End If
         Next
@@ -1123,9 +1156,11 @@ Public Class StudentUnits
             End If
 
             If lbl.Name.EndsWith("EXP", StringComparison.OrdinalIgnoreCase) Then
+                If IsProfilingLabelExcludedFromAverage(lbl.Name) Then Continue For
                 expSum += val.Value
                 expCount += 1
             ElseIf lbl.Name.EndsWith("DEMO", StringComparison.OrdinalIgnoreCase) Then
+                If IsProfilingLabelExcludedFromAverage(lbl.Name) Then Continue For
                 demoSum += val.Value
                 demoCount += 1
             End If
@@ -1439,23 +1474,61 @@ Public Class StudentUnits
         Return TryParsePercent(avgLbl.Text)
     End Function
 
+    Private Function ShouldHideLeaControlsPendingProfiling() As Boolean
+        Return profilingLoadInProgress OrElse Not profilingDependentUiReady
+    End Function
+
+    Private Sub HideLeaControlsPendingProfiling()
+        Label2.Visible = False
+        TextBox1.Visible = False
+        Label5.Visible = False
+        Label6.Visible = False
+        ComboBox1.Visible = False
+        CheckBox40.Visible = False
+        CheckBox41.Visible = False
+        Button1.Visible = False
+        Button2.Visible = False
+        Button3.Visible = False
+        Label14.Visible = False
+        Label15.Visible = False
+    End Sub
+
+    ''' <summary>True when UEEDV0005 or UEEDV0008 has EXP or DEMO below 50% or unknown (N/A).</summary>
+    Private Function HasReducedThresholdUnitBelowMinimum() As Boolean
+        For Each code As String In ReducedProfilingThresholdUnitCodes
+            Dim expValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "EXP")
+            Dim demoValue As Nullable(Of Double) = GetUnitMetricFromApiOrLabel(code, "DEMO")
+            If Not expValue.HasValue OrElse Not demoValue.HasValue Then
+                Return True
+            End If
+            If expValue.Value < ReducedProfilingThresholdPercent OrElse demoValue.Value < ReducedProfilingThresholdPercent Then
+                Return True
+            End If
+        Next
+        Return False
+    End Function
+
     Private Sub ApplyLowAverageOverrideForCheckbox28And29()
         Dim avgPercent As Nullable(Of Double) = TryGetLabel13PercentValue()
         Dim isBelow85 As Boolean = avgPercent.HasValue AndAlso avgPercent.Value < 85.0
         Dim isBelow100 As Boolean = avgPercent.HasValue AndAlso avgPercent.Value < 100.0
         Dim triggeredBy28 As Boolean = CheckBox28.Checked AndAlso isBelow85
         Dim triggeredBy29 As Boolean = CheckBox29.Checked AndAlso isBelow100
+        Dim triggeredByReducedUnits As Boolean = HasReducedThresholdUnitBelowMinimum()
 
         ' Label15 (100% rule) takes precedence when both are active.
         If triggeredBy29 Then
             SetControlVisibilityByName("Label14", False)
             SetControlVisibilityByName("Label15", True)
+        ElseIf triggeredBy28 OrElse triggeredByReducedUnits Then
+            SetControlVisibilityByName("Label14", True)
+            SetControlVisibilityByName("Label15", False)
         Else
-            SetControlVisibilityByName("Label14", triggeredBy28)
+            SetControlVisibilityByName("Label14", False)
             SetControlVisibilityByName("Label15", False)
         End If
 
-        If triggeredBy28 OrElse triggeredBy29 Then
+        If triggeredBy28 OrElse triggeredBy29 OrElse triggeredByReducedUnits Then
             Button1.Visible = False
             Button2.Visible = False
             Label2.Visible = False
@@ -1472,6 +1545,11 @@ Public Class StudentUnits
     End Sub
 
     Private Sub UpdateButtonVisibility()
+        If ShouldHideLeaControlsPendingProfiling() Then
+            HideLeaControlsPendingProfiling()
+            Return
+        End If
+
         ' Check if all checkboxes are checked
         Dim allChecked As Boolean = True
         For Each cb As CheckBox In {CheckBox1, CheckBox2, CheckBox3, CheckBox4, CheckBox5, CheckBox6, CheckBox7, CheckBox8, CheckBox9, CheckBox10, CheckBox11, CheckBox12, CheckBox13, CheckBox14, CheckBox15, CheckBox16, CheckBox17, CheckBox18, CheckBox19, CheckBox20, CheckBox21, CheckBox22, CheckBox23, CheckBox24, CheckBox25, CheckBox26, CheckBox28, CheckBox27}
@@ -1784,13 +1862,7 @@ Public Class StudentUnits
     End Function
 
     Private Sub TextBox1_TextChanged(sender As Object, e As EventArgs) Handles TextBox1.TextChanged
-        If Not String.IsNullOrEmpty(TextBox1.Text) AndAlso (CheckBox40.Checked OrElse CheckBox41.Checked) Then
-            Button1.Visible = True
-            Button2.Visible = True
-        Else
-            Button1.Visible = False
-            Button2.Visible = False
-        End If
+        UpdateButtonVisibility()
     End Sub
 
     Private Async Function ConfirmProfilingIfStudentNotFoundAsync() As Task(Of Boolean)
@@ -2048,6 +2120,7 @@ Public Class StudentUnits
 
         RefreshProfilingBtn.Enabled = False
         Cursor = Cursors.WaitCursor
+        HideLeaControlsPendingProfiling()
         SetProfilingSummary("Loading student qualification data...", Color.SteelBlue)
 
         Try
@@ -2065,18 +2138,22 @@ Public Class StudentUnits
 
             If result.IsSuccessful Then
                 ApplyUnitProfilingAnnotations(result)
+                hasLoadedStudentProfiling = True
                 WriteProfilingDebugDump(result)
                 SetProfilingSummary("Student qualification data written to debug file.", Color.DarkGreen)
             Else
+                hasLoadedStudentProfiling = False
                 WriteProfilingDebugDump("Student qualification request failed: " & result.ErrorMessage)
                 SetProfilingSummary("Student qualification request failed: " & result.ErrorMessage, Color.Maroon)
             End If
         Catch ex As Exception
+            hasLoadedStudentProfiling = False
             WriteProfilingDebugDump("Student qualification request failed: " & ex.Message)
             SetProfilingSummary("Student qualification request failed: " & ex.Message, Color.Maroon)
         Finally
             Cursor = Cursors.Default
             RefreshProfilingBtn.Enabled = True
+            UpdateButtonVisibility()
         End Try
     End Sub
 End Class
