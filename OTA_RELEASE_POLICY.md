@@ -11,7 +11,7 @@ The app currently uses:
 When preparing a new build, use an incremented tag like:
 
 - `v2.1sql`
-- `v3.0sql`
+- `v3.1sql`
 
 ## Release notes metadata (optional but recommended)
 

@@ -15,9 +15,14 @@ Public Class SettingsForm
     Private Const MaxWidth As Integer = 1600
     Private Const MaxHeight As Integer = 600
     Dim dataSet As New DataSet()
+    Private _isSyncingMassEmailSetting As Boolean = False
+
     Private Sub Settings_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         Dim SqlConString As String = My.Settings.SQLConString
         TextBox5.Text = SqlConString
+        _isSyncingMassEmailSetting = True
+        MassEmailChkBx.Checked = My.Settings.MassEmail
+        _isSyncingMassEmailSetting = False
         ' Load initial email addresses from the database and display them in TextBoxes
         LoadCurrentSettings()
         PopulateTeacherComboBox()
@@ -202,11 +207,10 @@ Public Class SettingsForm
         TradesAdminTB.Text = Trades
     End Sub
     Private Sub btnCancel_Click(sender As Object, e As EventArgs) Handles btnCancel.Click
-        ' Store the state of the checkbox in application settings
         My.Settings.MassEmail = Me.MassEmailChkBx.Checked
-        ' Save the settings
         My.Settings.Save()
-        Me.Close() ' Close the form without saving changes
+        MainFrm.UpdateMassEmailButtonVisibility()
+        Me.Close()
     End Sub
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
@@ -1223,20 +1227,17 @@ Public Class SettingsForm
     End Sub
 
     Private Sub SettingsForm_Closing(sender As Object, e As CancelEventArgs) Handles Me.Closing
-        ' Store the state of the checkbox in application settings
         My.Settings.MassEmail = Me.MassEmailChkBx.Checked
-        ' Save the settings
         My.Settings.Save()
+        MainFrm.UpdateMassEmailButtonVisibility()
     End Sub
 
     Private Sub MassEmailChkBx_CheckedChanged(sender As Object, e As EventArgs) Handles MassEmailChkBx.CheckedChanged
+        If _isSyncingMassEmailSetting Then Return
 
-        ' Show or hide the MassEmailBtn button based on the checkbox state
-        If MassEmailChkBx.Checked Then
-            MainFrm.MassEmailBtn.Visible = True
-        Else
-            MainFrm.MassEmailBtn.Visible = False
-        End If
+        My.Settings.MassEmail = MassEmailChkBx.Checked
+        My.Settings.Save()
+        MainFrm.UpdateMassEmailButtonVisibility()
     End Sub
 
     Private Sub txtAdminEmail_TextChanged(sender As Object, e As EventArgs) Handles txtAdminEmail.TextChanged

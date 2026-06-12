@@ -73,6 +73,10 @@ Partial Class MainFrm
         EmployerSurnameLBL = New Label()
         EmployerBusinessNameLBL = New Label()
         EmployerEmailLBL = New Label()
+        chkStudentNotEmployed = New CheckBox()
+        CheckBox1 = New CheckBox()
+        lblUnemploymentDate = New Label()
+        lblUnemploymentSixMonthWarning = New Label()
         StudentIDLBL = New Label()
         StudentFirstnameLBL = New Label()
         StudentSurnameLBL = New Label()
@@ -662,6 +666,51 @@ Partial Class MainFrm
         EmployerEmailLBL.Text = "Employer Email"
         EmployerEmailLBL.Visible = False
         ' 
+        ' chkStudentNotEmployed
+        ' 
+        chkStudentNotEmployed.AutoSize = True
+        chkStudentNotEmployed.Font = New Font("Segoe UI", 8.25F)
+        chkStudentNotEmployed.Location = New Point(355, 427)
+        chkStudentNotEmployed.Name = "chkStudentNotEmployed"
+        chkStudentNotEmployed.Size = New Size(189, 17)
+        chkStudentNotEmployed.TabIndex = 120
+        chkStudentNotEmployed.Text = "Student not currently employed"
+        chkStudentNotEmployed.UseVisualStyleBackColor = True
+        chkStudentNotEmployed.Visible = False
+        ' 
+        ' CheckBox1
+        ' 
+        CheckBox1.AutoSize = True
+        CheckBox1.Font = New Font("Segoe UI", 8.25F)
+        CheckBox1.Location = New Point(147, 427)
+        CheckBox1.Name = "CheckBox1"
+        CheckBox1.Size = New Size(210, 17)
+        CheckBox1.TabIndex = 123
+        CheckBox1.Text = "Incorrect employment details on file"
+        CheckBox1.UseVisualStyleBackColor = True
+        CheckBox1.Visible = False
+        ' 
+        ' lblUnemploymentDate
+        ' 
+        lblUnemploymentDate.AutoSize = True
+        lblUnemploymentDate.Font = New Font("Segoe UI", 8.25F)
+        lblUnemploymentDate.ForeColor = Color.DarkRed
+        lblUnemploymentDate.Location = New Point(541, 428)
+        lblUnemploymentDate.Name = "lblUnemploymentDate"
+        lblUnemploymentDate.Size = New Size(0, 13)
+        lblUnemploymentDate.TabIndex = 121
+        lblUnemploymentDate.Visible = False
+        ' 
+        ' lblUnemploymentSixMonthWarning
+        ' 
+        lblUnemploymentSixMonthWarning.Font = New Font("Segoe UI", 8.25F, FontStyle.Bold)
+        lblUnemploymentSixMonthWarning.ForeColor = Color.Red
+        lblUnemploymentSixMonthWarning.Location = New Point(373, 283)
+        lblUnemploymentSixMonthWarning.Name = "lblUnemploymentSixMonthWarning"
+        lblUnemploymentSixMonthWarning.Size = New Size(689, 17)
+        lblUnemploymentSixMonthWarning.TabIndex = 122
+        lblUnemploymentSixMonthWarning.Visible = False
+        ' 
         ' StudentIDLBL
         ' 
         StudentIDLBL.AutoSize = True
@@ -1168,6 +1217,10 @@ Partial Class MainFrm
         Controls.Add(StudentSurnameLBL)
         Controls.Add(StudentFirstnameLBL)
         Controls.Add(StudentIDLBL)
+        Controls.Add(lblUnemploymentSixMonthWarning)
+        Controls.Add(lblUnemploymentDate)
+        Controls.Add(chkStudentNotEmployed)
+        Controls.Add(CheckBox1)
         Controls.Add(EmployerEmailLBL)
         Controls.Add(EmployerBusinessNameLBL)
         Controls.Add(EmployerSurnameLBL)
@@ -1277,6 +1330,10 @@ Partial Class MainFrm
     Friend WithEvents EmployerSurnameLBL As Label
     Friend WithEvents EmployerBusinessNameLBL As Label
     Friend WithEvents EmployerEmailLBL As Label
+    Friend WithEvents chkStudentNotEmployed As CheckBox
+    Friend WithEvents CheckBox1 As CheckBox
+    Friend WithEvents lblUnemploymentDate As Label
+    Friend WithEvents lblUnemploymentSixMonthWarning As Label
     Friend WithEvents StudentIDLBL As Label
     Friend WithEvents StudentFirstnameLBL As Label
     Friend WithEvents StudentSurnameLBL As Label

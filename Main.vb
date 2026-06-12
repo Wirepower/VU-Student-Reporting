@@ -36,6 +36,19 @@ Public Class MainFrm
     Public employerEmail As String
     Private template As String = "" ' Declaration at the class level
     Private _profilingApiToolTip As ToolTip
+    Private _isSyncingEmploymentCheckbox As Boolean = False
+    Private Const EmploymentStatusUnemployed As String = "Unemployed"
+    Private Const EmploymentStatusIncorrectDetails As String = "incorrectDetails"
+    Private Const IncorrectDetailsUncheckPrompt As String =
+        "Please check AgreementDashboard on StudentOne to confirm the correct employer details have been entered." & vbCrLf & vbCrLf &
+        "Yes — employer details are correct; uncheck this flag." & vbCrLf &
+        "No — keep this flag checked until details are fixed."
+    Private Const UnemployedUncheckPrompt As String =
+        "Confirm student employer details are correct on StudentOne AgreementsDashboard before clearing this flag." & vbCrLf & vbCrLf &
+        "Yes — employer details are correct; uncheck this flag." & vbCrLf &
+        "No — keep this flag checked (student still not employed)."
+    Private Const UnemploymentSixMonthWarningText As String =
+        "No further classes or unit progression until the student is employed."
 
     ' Declare teacher list workbook and worksheet
     Private Sub UpdateReconnectButtonVisibility()
@@ -229,18 +242,7 @@ Public Class MainFrm
             ComboBox5.Text = ""
             ComboBox6.Text = ""
             VersionLBL.Text = Version
-            '-------
-            SettingsForm.MassEmailChkBx.Checked = My.Settings.MassEmail
-            ' Retrieve the stored state of the checkbox from application settings
-            SettingsForm.MassEmailChkBx.Checked = My.Settings.MassEmail
-
-            ' Get the initial visibility of the MassEmailBtn button based on the checkbox state
-            If SettingsForm.MassEmailChkBx.Checked Then
-                MassEmailBtn.Visible = True
-            Else
-                MassEmailBtn.Visible = False
-            End If
-            '-------
+            UpdateMassEmailButtonVisibility()
 
             System.Windows.Forms.Application.DoEvents()
             loadingForm.Label1.Text = "Loading Complete!"
@@ -1432,6 +1434,7 @@ Public Class MainFrm
     Private Sub BlockGroupCB_SelectedIndexChanged(sender As Object, e As EventArgs) Handles BlockGroupCB.SelectedIndexChanged
         Button11.Visible = False
         Button12.Visible = False
+        HideEmploymentStatusControls()
         StudentCB.Text = ""
         Label19.Text = ""
         Label22.Text = ""
@@ -1465,6 +1468,22 @@ Public Class MainFrm
             PopulateBlockGroupCB()
         End If
 
+        UpdateMassEmailButtonVisibility()
+    End Sub
+
+    Private Function IsMassEmailFeatureEnabled() As Boolean
+        Return My.Settings.MassEmail
+    End Function
+
+    Friend Sub UpdateMassEmailButtonVisibility()
+        If Not IsMassEmailFeatureEnabled() Then
+            MassEmailBtn.Visible = False
+            Return
+        End If
+
+        MassEmailBtn.Visible =
+            BlockGroupCB.SelectedIndex >= 0 AndAlso
+            BlockGroupCB.SelectedItem IsNot Nothing
     End Sub
 
     Private Sub PopulateStudentCB(blockGroup As String)
@@ -1509,68 +1528,67 @@ Public Class MainFrm
         If StudentCB.SelectedIndex < 0 OrElse StudentCB.SelectedItem Is Nothing Then
             Button11.Visible = False
             Button12.Visible = False
+            HideEmploymentStatusControls()
             Return
         End If
 
-        ' Show the loading form
+        HideEmploymentStatusControls()
+
         Dim loadingForm As New LoadingForm()
         loadingForm.Show()
-        ' Define custom increments
-        Dim totalSteps As Integer = 100 ' Total number of steps
-        Dim currentStep As Integer = 5  ' Current step
+        Dim totalSteps As Integer = 100
+        Dim currentStep As Integer = 5
         loadingForm.Label1.Text = "Loading..."
-        ' Populate labels with selected student's information
         Dim selectedStudent As String = StudentCB.SelectedItem.ToString()
 
+        Try
+            UpdateLabels(selectedStudent)
+            UpdateExemplarProfilingEmailButtonVisibility()
+            UpdateStudentReallocationButtonVisibility()
+            ExemplarEmailOverrides.InvalidateCacheForStudent(StudentIDLBL.Text?.Trim())
 
-        UpdateLabels(selectedStudent)
-        UpdateExemplarProfilingEmailButtonVisibility()
-        UpdateStudentReallocationButtonVisibility()
-        ExemplarEmailOverrides.InvalidateCacheForStudent(StudentIDLBL.Text?.Trim())
+            SelectedStudentLBL.Text = selectedStudent
 
-        ' Update SelectedStudentLBL
-        SelectedStudentLBL.Text = selectedStudent
+            Dim studentID As String = StudentIDLBL.Text
+            currentStep = 50
+            Button10.Visible = True
+            Label15.Visible = True
+            Label19.Visible = True
+            Label18.Visible = True
+            Label16.Visible = True
+            Label22.Visible = True
+            Label20.Visible = True
+            Label17.Visible = True
+            Label23.Visible = True
+            Label21.Visible = True
+            Button10.Visible = True
+            Label5.Visible = True
+            ComboBox12.Visible = True
+            Label7.Visible = True
+            teacherNameComboBox.Visible = True
+            Button5.Visible = True
 
-        Dim studentID As String = StudentIDLBL.Text
-        currentStep = 50
-        Button10.Visible = True
-        Label15.Visible = True
-        Label19.Visible = True
-        Label18.Visible = True
-        Label16.Visible = True
-        Label22.Visible = True
-        Label20.Visible = True
-        Label17.Visible = True
-        Label23.Visible = True
-        Label21.Visible = True
-        Button10.Visible = True
-        Label5.Visible = True
-        ComboBox12.Visible = True
-        Label7.Visible = True
-        teacherNameComboBox.Visible = True
-        Button5.Visible = True
-        ' Call the method to update the investigation report label when the selection in studentCB is changed
-        'UpdateInvestigationReport()
-        loadingForm.Label1.Text = "Loading Complete!"
-        loadingForm.UpdateProgress(totalSteps)
-        ' Simulate a delay
-        System.Threading.Thread.Sleep(100)
-        'CheckVersionAndDisplayInfo()
-        ' Close the loading form once loading is finished
-        loadingForm.Close()
-        ' Check the order of checked items and update label
-        Dim studentUnitsForm As New StudentUnits()
+            CompletionChecker.LoadCheckBoxStates(studentID)
+            ResitModule.CheckResit(StudentIDLBL.Text, resitLabel)
+            If StudentCB.Text = "" Then
+                PopulateBlockGroupCB()
+            End If
 
-        ' Check the order of checked items and update label
-        'CheckCompletionOrderAndUpdateLabel(StudentIDLBL.Text, UnitAlertLbl, StudentUnits.UnitAlertLbl1, StudentUnits.CheckedListBox1)
-        CompletionChecker.LoadCheckBoxStates(studentID)
-        ResitModule.CheckResit(StudentIDLBL.Text, resitLabel)
-        If StudentCB.Text = "" Then
-            PopulateBlockGroupCB()
+            loadingForm.Label1.Text = "Loading profiling..."
+            loadingForm.UpdateProgress(75)
+            Await RefreshSelectedStudentProfilingAsync()
+            UpdateExemplarProfilingEmailButtonVisibility()
+
+            loadingForm.Label1.Text = "Loading Complete!"
+            loadingForm.UpdateProgress(totalSteps)
+            System.Threading.Thread.Sleep(100)
+        Finally
+            loadingForm.Close()
+        End Try
+
+        If StudentCB.SelectedIndex >= 0 AndAlso StudentCB.SelectedItem IsNot Nothing Then
+            RefreshEmploymentStatusFromDatabase()
         End If
-
-        Await RefreshSelectedStudentProfilingAsync()
-        UpdateExemplarProfilingEmailButtonVisibility()
 
         '-------------------Need to look at below----------------------------
 
@@ -1627,6 +1645,306 @@ Public Class MainFrm
         ' Call AbsentEarlyLateLog to update absence, late arrival, and early departure logs
         AbsentEarlyLateLog(selectedStudent)
         Label28.Text = GetStudentAddress(selectedStudent)
+    End Sub
+
+    Private Sub HideEmploymentStatusControls()
+        chkStudentNotEmployed.Visible = False
+        CheckBox1.Visible = False
+        lblUnemploymentDate.Visible = False
+        lblUnemploymentSixMonthWarning.Visible = False
+        SetEmploymentCheckboxesChecked(False, False)
+        lblUnemploymentDate.Text = ""
+        lblUnemploymentSixMonthWarning.Text = ""
+    End Sub
+
+    Private Sub SetEmploymentCheckboxesChecked(unemployed As Boolean, incorrectDetails As Boolean)
+        _isSyncingEmploymentCheckbox = True
+        chkStudentNotEmployed.Checked = unemployed
+        CheckBox1.Checked = incorrectDetails
+        _isSyncingEmploymentCheckbox = False
+    End Sub
+
+    Private Function IsEmploymentSubmitBlocked() As Boolean
+        Return chkStudentNotEmployed.Checked OrElse CheckBox1.Checked
+    End Function
+
+    Private Sub ApplyEmploymentSubmitButtonVisibility()
+        If IsEmploymentSubmitBlocked() Then
+            Button8.Visible = False
+        End If
+    End Sub
+
+    Private Sub RestoreSubmitButtonVisibilityAfterEmployment()
+        If Not IsEmploymentSubmitBlocked() AndAlso Not String.IsNullOrWhiteSpace(ComboBox12.Text) Then
+            DisplayMode()
+        End If
+    End Sub
+
+    Private Sub ApplyEmploymentStatusVisuals(isUnemployed As Boolean, unemploymentDate As Nullable(Of Date))
+        lblUnemploymentDate.ForeColor = Color.DarkRed
+
+        If isUnemployed AndAlso unemploymentDate.HasValue Then
+            lblUnemploymentDate.Text = "Unemployed since: " & unemploymentDate.Value.ToString("dd/MM/yyyy")
+            lblUnemploymentDate.Visible = True
+
+            If Date.Today >= unemploymentDate.Value.AddMonths(6) Then
+                lblUnemploymentSixMonthWarning.ForeColor = Color.Red
+                lblUnemploymentSixMonthWarning.Text = UnemploymentSixMonthWarningText
+                lblUnemploymentSixMonthWarning.Visible = True
+            Else
+                lblUnemploymentSixMonthWarning.Text = ""
+                lblUnemploymentSixMonthWarning.Visible = False
+            End If
+        Else
+            lblUnemploymentDate.Text = ""
+            lblUnemploymentDate.Visible = False
+            lblUnemploymentSixMonthWarning.Text = ""
+            lblUnemploymentSixMonthWarning.Visible = False
+        End If
+    End Sub
+
+    Private Function CurrentStudentIdForEmploymentLookup() As String
+        Return SQLCon.NormalizeStudentIdForLogs(StudentIDLBL.Text)
+    End Function
+
+    Private Sub RefreshEmploymentStatusFromDatabase()
+        Dim sid As String = CurrentStudentIdForEmploymentLookup()
+        If String.IsNullOrWhiteSpace(sid) Then
+            HideEmploymentStatusControls()
+            Return
+        End If
+
+        Dim status As String = Nothing
+        Dim unemploymentDate As Nullable(Of Date) = Nothing
+
+        Const query As String =
+            "SELECT EmploymentStatus, DateofUnemployment " &
+            "FROM ElectrotechnologyReports.dbo.StudentEmploymentStatus " &
+            "WHERE StudentID = @StudentID"
+
+        Try
+            Using cmd As New SqlCommand(query, connection)
+                cmd.Parameters.AddWithValue("@StudentID", sid)
+                Using reader As SqlDataReader = cmd.ExecuteReader()
+                    If reader.Read() Then
+                        If Not reader.IsDBNull(0) Then status = Convert.ToString(reader(0)).Trim()
+                        If Not reader.IsDBNull(1) Then unemploymentDate = reader.GetDateTime(1).Date
+                    End If
+                End Using
+            End Using
+        Catch ex As System.Exception
+            chkStudentNotEmployed.Visible = True
+            CheckBox1.Visible = True
+            lblUnemploymentDate.Visible = True
+            lblUnemploymentDate.Text = "(Employment table not available)"
+            lblUnemploymentDate.ForeColor = Color.DarkOrange
+            lblUnemploymentSixMonthWarning.Visible = False
+            Return
+        End Try
+
+        lblUnemploymentDate.ForeColor = Color.DarkRed
+        Dim isUnemployed As Boolean = Not String.IsNullOrWhiteSpace(status) AndAlso
+            String.Equals(status, EmploymentStatusUnemployed, StringComparison.OrdinalIgnoreCase)
+        Dim isIncorrectDetails As Boolean = Not String.IsNullOrWhiteSpace(status) AndAlso
+            String.Equals(status, EmploymentStatusIncorrectDetails, StringComparison.OrdinalIgnoreCase)
+
+        SetEmploymentCheckboxesChecked(isUnemployed, isIncorrectDetails)
+
+        chkStudentNotEmployed.Visible = True
+        CheckBox1.Visible = True
+        ApplyEmploymentStatusVisuals(isUnemployed, unemploymentDate)
+        If isUnemployed OrElse isIncorrectDetails Then
+            ApplyEmploymentSubmitButtonVisibility()
+        Else
+            RestoreSubmitButtonVisibilityAfterEmployment()
+        End If
+    End Sub
+
+    Private Function PromptDateOfUnemployment() As Nullable(Of Date)
+        Using prompt As New Form()
+            prompt.Text = "Date of unemployment"
+            prompt.StartPosition = FormStartPosition.CenterParent
+            prompt.FormBorderStyle = FormBorderStyle.FixedDialog
+            prompt.MaximizeBox = False
+            prompt.MinimizeBox = False
+            prompt.ClientSize = New Size(360, 140)
+
+            Dim lbl As New Label() With {
+                .AutoSize = False,
+                .Location = New Point(12, 12),
+                .Size = New Size(336, 40),
+                .Text = "Enter the date the student was no longer employed:"
+            }
+
+            Dim dt As New DateTimePicker() With {
+                .Location = New Point(12, 58),
+                .Size = New Size(336, 23),
+                .Format = DateTimePickerFormat.Short,
+                .Value = Date.Today
+            }
+
+            Dim btnOk As New Button() With {
+                .Text = "OK",
+                .DialogResult = DialogResult.OK,
+                .Location = New Point(192, 95),
+                .Size = New Size(75, 28)
+            }
+            Dim btnCancel As New Button() With {
+                .Text = "Cancel",
+                .DialogResult = DialogResult.Cancel,
+                .Location = New Point(273, 95),
+                .Size = New Size(75, 28)
+            }
+
+            prompt.Controls.AddRange(New Control() {lbl, dt, btnOk, btnCancel})
+            prompt.AcceptButton = btnOk
+            prompt.CancelButton = btnCancel
+
+            If prompt.ShowDialog(Me) = DialogResult.OK Then
+                Return dt.Value.Date
+            End If
+        End Using
+        Return Nothing
+    End Function
+
+    Private Sub SaveEmploymentStatus(employmentStatus As String, unemploymentDate As Nullable(Of Date))
+        Dim sid As String = CurrentStudentIdForEmploymentLookup()
+        If String.IsNullOrWhiteSpace(sid) Then Return
+
+        Const sql As String =
+            "IF EXISTS (SELECT 1 FROM ElectrotechnologyReports.dbo.StudentEmploymentStatus WHERE StudentID = @StudentID) " &
+            "BEGIN " &
+            "    UPDATE ElectrotechnologyReports.dbo.StudentEmploymentStatus " &
+            "    SET EmploymentStatus = @EmploymentStatus, DateofUnemployment = @DateofUnemployment " &
+            "    WHERE StudentID = @StudentID " &
+            "END " &
+            "ELSE " &
+            "BEGIN " &
+            "    INSERT INTO ElectrotechnologyReports.dbo.StudentEmploymentStatus (StudentID, EmploymentStatus, DateofUnemployment) " &
+            "    VALUES (@StudentID, @EmploymentStatus, @DateofUnemployment) " &
+            "END"
+
+        Using cmd As New SqlCommand(sql, connection)
+            cmd.Parameters.AddWithValue("@StudentID", sid)
+            cmd.Parameters.AddWithValue("@EmploymentStatus", employmentStatus)
+            If unemploymentDate.HasValue Then
+                cmd.Parameters.AddWithValue("@DateofUnemployment", unemploymentDate.Value)
+            Else
+                cmd.Parameters.AddWithValue("@DateofUnemployment", DBNull.Value)
+            End If
+            cmd.ExecuteNonQuery()
+        End Using
+    End Sub
+
+    Private Sub ClearEmploymentStatusInDatabase()
+        Dim sid As String = CurrentStudentIdForEmploymentLookup()
+        If String.IsNullOrWhiteSpace(sid) Then Return
+
+        Const sql As String =
+            "UPDATE ElectrotechnologyReports.dbo.StudentEmploymentStatus " &
+            "SET EmploymentStatus = NULL, DateofUnemployment = NULL " &
+            "WHERE StudentID = @StudentID"
+
+        Using cmd As New SqlCommand(sql, connection)
+            cmd.Parameters.AddWithValue("@StudentID", sid)
+            cmd.ExecuteNonQuery()
+        End Using
+    End Sub
+
+    Private Sub chkStudentNotEmployed_CheckedChanged(sender As Object, e As EventArgs) Handles chkStudentNotEmployed.CheckedChanged
+        If _isSyncingEmploymentCheckbox Then Return
+
+        Try
+            If chkStudentNotEmployed.Checked Then
+                Dim pickedDate As Nullable(Of Date) = PromptDateOfUnemployment()
+                If Not pickedDate.HasValue Then
+                    SetEmploymentCheckboxesChecked(False, CheckBox1.Checked)
+                    ApplyEmploymentStatusVisuals(False, Nothing)
+                    RestoreSubmitButtonVisibilityAfterEmployment()
+                    Return
+                End If
+
+                SetEmploymentCheckboxesChecked(True, False)
+                SaveEmploymentStatus(EmploymentStatusUnemployed, pickedDate.Value)
+                ApplyEmploymentStatusVisuals(True, pickedDate.Value)
+                ApplyEmploymentSubmitButtonVisibility()
+            Else
+                Dim confirmUncheck As DialogResult = MessageBox.Show(
+                    UnemployedUncheckPrompt,
+                    "Student not employed",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question)
+
+                If confirmUncheck <> DialogResult.Yes Then
+                    SetEmploymentCheckboxesChecked(True, CheckBox1.Checked)
+                    ApplyEmploymentStatusVisuals(True, GetStoredUnemploymentDate())
+                    ApplyEmploymentSubmitButtonVisibility()
+                    Return
+                End If
+
+                ClearEmploymentStatusInDatabase()
+                SetEmploymentCheckboxesChecked(False, False)
+                ApplyEmploymentStatusVisuals(False, Nothing)
+                RestoreSubmitButtonVisibilityAfterEmployment()
+            End If
+        Catch ex As System.Exception
+            MessageBox.Show("Could not save employment status: " & ex.Message, "Employment status", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            RefreshEmploymentStatusFromDatabase()
+        End Try
+    End Sub
+
+    Private Function GetStoredUnemploymentDate() As Nullable(Of Date)
+        Dim sid As String = CurrentStudentIdForEmploymentLookup()
+        If String.IsNullOrWhiteSpace(sid) Then Return Nothing
+
+        Const query As String =
+            "SELECT DateofUnemployment " &
+            "FROM ElectrotechnologyReports.dbo.StudentEmploymentStatus " &
+            "WHERE StudentID = @StudentID"
+
+        Try
+            Using cmd As New SqlCommand(query, connection)
+                cmd.Parameters.AddWithValue("@StudentID", sid)
+                Dim result As Object = cmd.ExecuteScalar()
+                If result IsNot Nothing AndAlso result IsNot DBNull.Value Then
+                    Return Convert.ToDateTime(result).Date
+                End If
+            End Using
+        Catch
+        End Try
+
+        Return Nothing
+    End Function
+
+    Private Sub CheckBox1_CheckedChanged(sender As Object, e As EventArgs) Handles CheckBox1.CheckedChanged
+        If _isSyncingEmploymentCheckbox Then Return
+
+        Try
+            If CheckBox1.Checked Then
+                SetEmploymentCheckboxesChecked(False, True)
+                SaveEmploymentStatus(EmploymentStatusIncorrectDetails, Nothing)
+                ApplyEmploymentStatusVisuals(False, Nothing)
+                ApplyEmploymentSubmitButtonVisibility()
+            Else
+                Dim confirmUncheck As DialogResult = MessageBox.Show(
+                    IncorrectDetailsUncheckPrompt,
+                    "Incorrect employment details",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question)
+
+                If confirmUncheck <> DialogResult.Yes Then
+                    SetEmploymentCheckboxesChecked(chkStudentNotEmployed.Checked, True)
+                    Return
+                End If
+
+                ClearEmploymentStatusInDatabase()
+                SetEmploymentCheckboxesChecked(False, False)
+                RestoreSubmitButtonVisibilityAfterEmployment()
+            End If
+        Catch ex As System.Exception
+            MessageBox.Show("Could not save employment status: " & ex.Message, "Employment status", MessageBoxButtons.OK, MessageBoxIcon.Warning)
+            RefreshEmploymentStatusFromDatabase()
+        End Try
     End Sub
 
     Private Function GetStudentAddress(selectedStudent As String) As String
@@ -2469,6 +2787,7 @@ Public Class MainFrm
 
 
         End If
+        ApplyEmploymentSubmitButtonVisibility()
     End Sub
 
     Private Sub Button6_Click_1(sender As Object, e As EventArgs)
@@ -2482,9 +2801,6 @@ Public Class MainFrm
         If connection IsNot Nothing AndAlso connection.State = ConnectionState.Open Then
             connection.Close()
         End If
-        ' Store the state of the checkbox in application settings
-        My.Settings.MassEmail = SettingsForm.MassEmailChkBx.Checked
-        ' Save the settings
         My.Settings.Save()
     End Sub
 
@@ -2573,6 +2889,7 @@ Public Class MainFrm
                 StudentCB.Text = ""
                 StudentCB.SelectedIndex = -1 ' Clear selected value
                 Button11.Visible = False
+                UpdateMassEmailButtonVisibility()
                 MessageBox.Show("Student ID Doesn't Exist")
             End If
         Else
@@ -2597,23 +2914,28 @@ Public Class MainFrm
     End Sub
 
     Private Sub MassEmailBtn_Click(sender As Object, e As EventArgs) Handles MassEmailBtn.Click
+        If Not IsMassEmailFeatureEnabled() Then
+            MassEmailBtn.Visible = False
+            Exit Sub
+        End If
+
         Dim OutApp As Object
         Dim OutMail As Object
         Dim body As String
-        Dim body1 As String
         Dim imageData As Byte() = RetrieveImageDataFromDatabase()
         If BlockGroupCB.SelectedItem Is Nothing Then
             MsgBox("Please select a Blockgroup for Mass Email")
             Exit Sub
         Else
-            ' Prompt the user for the email body message
-            Dim bodyMessage As String = InputBox("Enter the email body message:", "Email Body")
+            Dim includeEmployers As Boolean =
+                MessageBox.Show(
+                    "Include employer email addresses in this block group email?" & vbCrLf & vbCrLf &
+                    "Yes — include student and employer emails in BCC." & vbCrLf &
+                    "No — include student emails only in BCC.",
+                    "Include Employer in email",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question) = DialogResult.Yes
 
-            ' Check if the user cancelled the input
-            If String.IsNullOrEmpty(bodyMessage) Then
-                MsgBox("No email body message entered. Mass email cancelled.")
-                Exit Sub
-            End If
             Dim blockGroupCode As String = BlockGroupCB.SelectedItem.ToString()
 
             ' Extract the text after the underscore
@@ -2626,63 +2948,111 @@ Public Class MainFrm
             ' SQL connection string
             Dim connectionString As String = SQLCon.connectionString
 
-            ' SQL query to fetch student email addresses based on block group code
-            Dim query As String = "SELECT [Student Personal Email] FROM AgreementsDetails WHERE [Block Group Code] = @BlockGroupCode"
+            Dim query As String =
+                "SELECT [Student ID], [Student Given Name], [Student Family Name], [Student Personal Email], [Employer Email] " &
+                "FROM ElectrotechnologyReports.dbo.AgreementsDetails " &
+                "WHERE [Block Group Code] = @BlockGroupCode"
 
             Try
-                ' Create SQL connection
                 Using connection As New SqlConnection(connectionString)
                     connection.Open()
 
-                    ' Create SQL command
                     Using command As New SqlCommand(query, connection)
-                        ' Add parameter for block group code
                         command.Parameters.AddWithValue("@BlockGroupCode", blockGroupCode)
 
-                        ' Execute SQL command
                         Using reader As SqlDataReader = command.ExecuteReader()
-                            Dim outlookApp As New Application()
-                            Dim mail As MailItem = outlookApp.CreateItem(OlItemType.olMailItem)
-
-                            ' Initialize StringBuilder for BCC field
+                            Dim bccAddresses As New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)
                             Dim bccBuilder As New StringBuilder()
+                            Dim missingStudentEmails As New List(Of String)()
+                            Dim missingEmployerEmails As New List(Of String)()
+                            Dim studentCount As Integer = 0
 
-                            ' Add student email addresses to StringBuilder
                             While reader.Read()
-                                ' Add each email address to the StringBuilder
-                                Dim emailAddress As String = reader("Student Personal Email").ToString()
-                                If Not String.IsNullOrEmpty(emailAddress) Then
-                                    If bccBuilder.Length > 0 Then
-                                        bccBuilder.Append("; ")
+                                studentCount += 1
+
+                                Dim studentId As String = If(reader.IsDBNull(0), "", Convert.ToString(reader(0)).Trim())
+                                Dim givenName As String = If(reader.IsDBNull(1), "", reader.GetString(1).Trim())
+                                Dim familyName As String = If(reader.IsDBNull(2), "", reader.GetString(2).Trim())
+                                Dim studentLabel As String = (studentId & " - " & givenName & " " & familyName).Trim()
+
+                                Dim studentEmail As String = ""
+                                If Not reader.IsDBNull(3) Then
+                                    studentEmail = Convert.ToString(reader(3)).Trim()
+                                End If
+                                If String.IsNullOrWhiteSpace(studentEmail) Then
+                                    missingStudentEmails.Add(studentLabel)
+                                ElseIf bccAddresses.Add(studentEmail) Then
+                                    If bccBuilder.Length > 0 Then bccBuilder.Append("; ")
+                                    bccBuilder.Append(studentEmail)
+                                End If
+
+                                If includeEmployers Then
+                                    Dim employerEmail As String = ""
+                                    If Not reader.IsDBNull(4) Then
+                                        employerEmail = Convert.ToString(reader(4)).Trim()
                                     End If
-                                    bccBuilder.Append(emailAddress)
+                                    If String.IsNullOrWhiteSpace(employerEmail) Then
+                                        missingEmployerEmails.Add(studentLabel)
+                                    ElseIf bccAddresses.Add(employerEmail) Then
+                                        If bccBuilder.Length > 0 Then bccBuilder.Append("; ")
+                                        bccBuilder.Append(employerEmail)
+                                    End If
                                 End If
                             End While
 
-                            ' Create a new instance of Outlook Application
-                            'Dim outlookApp As New Outlook.Application()
+                            If studentCount = 0 Then
+                                MsgBox("No students were found for the selected block group.")
+                                Exit Sub
+                            End If
 
                             OutApp = CreateObject("Outlook.Application")
-                            ' Create a new email item
                             OutMail = OutApp.CreateItem(0)
 
-                            ' Set email properties
                             With OutMail
                                 .To = ""
                                 .cc = ""
                                 .bcc = bccBuilder.ToString()
                                 .Subject = "Attention Class: " & blockGroupText
                                 body = "Attention All Students In Class " & blockGroupText & "<BR><BR>"
-                                body1 = bodyMessage
-                                .HTMLbody = body & body1 & "<br><br><br><br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & Me.VersionLBL.Text
-                                .Display ' Display the email
+                                .HTMLbody = body & "<br><br><br><br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " & Me.VersionLBL.Text
+                                .Display()
                             End With
 
-                            ' Release COM objects
+                            If missingStudentEmails.Count > 0 OrElse missingEmployerEmails.Count > 0 Then
+                                Dim warning As New StringBuilder()
+                                warning.AppendLine("The email draft was opened with the email addresses that were found.")
+                                warning.AppendLine()
+                                If bccBuilder.Length = 0 Then
+                                    warning.AppendLine("No email addresses were added to BCC.")
+                                End If
+                                warning.AppendLine("Please add any missing addresses manually in Outlook before sending.")
+                                warning.AppendLine()
+
+                                If missingStudentEmails.Count > 0 Then
+                                    warning.AppendLine("Students without a personal email address:")
+                                    For Each studentEntry As String In missingStudentEmails
+                                        warning.AppendLine(" - " & studentEntry)
+                                    Next
+                                    warning.AppendLine()
+                                End If
+
+                                If includeEmployers AndAlso missingEmployerEmails.Count > 0 Then
+                                    warning.AppendLine("Students without an employer email address:")
+                                    For Each studentEntry As String In missingEmployerEmails
+                                        warning.AppendLine(" - " & studentEntry)
+                                    Next
+                                End If
+
+                                MessageBox.Show(
+                                    warning.ToString().TrimEnd(),
+                                    "Missing email addresses",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Warning)
+                            End If
+
                             Marshal.ReleaseComObject(OutMail)
                             Marshal.ReleaseComObject(OutApp)
 
-                            ' Clean up
                             OutMail = Nothing
                             OutApp = Nothing
 

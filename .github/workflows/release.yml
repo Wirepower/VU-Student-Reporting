@@ -22,7 +22,7 @@ on:
           - "false"
           - "true"
       min_required_tag:
-        description: 'Optional minimum client version in vX.Y format (example: v3.0)'
+        description: 'Optional minimum client version in vX.Y format (example: v3.1)'
         required: false
         default: ""
       asset_name:
@@ -152,7 +152,7 @@ jobs:
 
           $minRequiredTag = "$env:MIN_REQUIRED_TAG_INPUT".Trim()
           if ($minRequiredTag -and $minRequiredTag -notmatch '^v\d+\.\d+$') {
-            throw "min_required_tag must match vX.Y (example: v3.0)."
+            throw "min_required_tag must match vX.Y (example: v3.1)."
           }
 
           $assetName = "$env:ASSET_NAME_INPUT".Trim()
