@@ -49,6 +49,10 @@ Public Class MainFrm
         "No — keep this flag checked (student still not employed)."
     Private Const UnemploymentSixMonthWarningText As String =
         "No further classes or unit progression until the student is employed."
+    Private Const AppTrainNotifiedPrompt As String =
+        "Has App-Train been notified?" & vbCrLf & vbCrLf &
+        "Yes — continue without creating an App-Train email." & vbCrLf &
+        "No — continue and open an App-Train notification email draft."
 
     ' Declare teacher list workbook and worksheet
     Private Sub UpdateReconnectButtonVisibility()
@@ -717,6 +721,147 @@ Public Class MainFrm
         End Try
     End Sub
 
+    Private Enum StudentReallocationEmailTemplate
+        NotYetCompetent = 0
+        MissedClassGroupMovedOn = 1
+        PracticalComponentIncomplete = 2
+        Other = 3
+    End Enum
+
+    Private Function PromptStudentReallocationEmailTemplate() As Nullable(Of StudentReallocationEmailTemplate)
+        Using prompt As New Form()
+            prompt.Text = "Student Re-Allocation email"
+            prompt.StartPosition = FormStartPosition.CenterParent
+            prompt.FormBorderStyle = FormBorderStyle.FixedDialog
+            prompt.MaximizeBox = False
+            prompt.MinimizeBox = False
+            prompt.ClientSize = New Size(520, 150)
+
+            Dim lbl As New Label() With {
+                .AutoSize = False,
+                .Location = New Point(12, 12),
+                .Size = New Size(496, 36),
+                .Text = "Select the email template to generate:"
+            }
+
+            Dim templateCombo As New ComboBox() With {
+                .DropDownStyle = ComboBoxStyle.DropDownList,
+                .Location = New Point(12, 52),
+                .Size = New Size(496, 23)
+            }
+            templateCombo.Items.Add("Not yet competent (re-allocation)")
+            templateCombo.Items.Add("Missed class (group moved on)")
+            templateCombo.Items.Add("Practical component incomplete")
+            templateCombo.Items.Add("Other reason")
+            templateCombo.SelectedIndex = 0
+
+            Dim btnOk As New Button() With {
+                .Text = "OK",
+                .DialogResult = DialogResult.OK,
+                .Location = New Point(352, 95),
+                .Size = New Size(75, 28)
+            }
+            Dim btnCancel As New Button() With {
+                .Text = "Cancel",
+                .DialogResult = DialogResult.Cancel,
+                .Location = New Point(433, 95),
+                .Size = New Size(75, 28)
+            }
+
+            prompt.Controls.AddRange(New Control() {lbl, templateCombo, btnOk, btnCancel})
+            prompt.AcceptButton = btnOk
+            prompt.CancelButton = btnCancel
+
+            If prompt.ShowDialog(Me) = DialogResult.OK AndAlso templateCombo.SelectedIndex >= 0 Then
+                Return CType(templateCombo.SelectedIndex, StudentReallocationEmailTemplate)
+            End If
+        End Using
+
+        Return Nothing
+    End Function
+
+    Private Function BuildReallocationGreetingHtml(safeStudentFull As String, safeEmployerName As String) As String
+        If String.IsNullOrWhiteSpace(safeEmployerName) Then
+            Return "<p>Hello " & safeStudentFull & ",</p>"
+        End If
+        Return "<p>Hello " & safeStudentFull & " and " & safeEmployerName & ",</p>"
+    End Function
+
+    Private Function BuildStudentReallocationEmailSubject(templateType As StudentReallocationEmailTemplate) As String
+        Select Case templateType
+            Case StudentReallocationEmailTemplate.NotYetCompetent
+                Return "Student Class Re-allocation — not yet competent"
+            Case StudentReallocationEmailTemplate.MissedClassGroupMovedOn
+                Return "Student Class Re-allocation — missed class"
+            Case StudentReallocationEmailTemplate.PracticalComponentIncomplete
+                Return "Student Class Re-allocation — practical component"
+            Case StudentReallocationEmailTemplate.Other
+                Return "Student Class Re-allocation — other"
+            Case Else
+                Return "Student Class Re-allocation"
+        End Select
+    End Function
+
+    Private Function BuildStudentReallocationEmailHtml(
+            templateType As StudentReallocationEmailTemplate,
+            safeStudentFull As String,
+            safeEmployerName As String) As String
+
+        Dim greeting As String = BuildReallocationGreetingHtml(safeStudentFull, safeEmployerName)
+
+        Select Case templateType
+            Case StudentReallocationEmailTemplate.NotYetCompetent
+                Return greeting &
+                    "<p>Please be advised that as " & safeStudentFull & " is not yet competent for a unit they have studied, they will be re-allocated to another group to proceed.</p>" &
+                    "<p>" & safeStudentFull & " <strong>IS NOT</strong> to attend in their current group until they have received a confirmation email for their new group allocation.</p>"
+
+            Case StudentReallocationEmailTemplate.MissedClassGroupMovedOn
+                Return greeting &
+                    "<p>Please be advised that as " & safeStudentFull & " has missed attending class, their group has moved on, and they <strong>ARE NOT</strong> to attend in their current group until they have received a confirmation email for their new group allocation.</p>"
+
+            Case StudentReallocationEmailTemplate.PracticalComponentIncomplete
+                Return greeting &
+                    "<p>As " & safeStudentFull & " is yet to complete the practical component for a unit, they may be required to attend trade school for 2 days a week in the future to have this component completed.</p>" &
+                    "<p>" & safeStudentFull & " should attend class as usual and wait for a confirmation email for further details.</p>"
+
+            Case StudentReallocationEmailTemplate.Other
+                Return greeting &
+                    "<p>Please be advised that " & safeStudentFull & " will be re-allocated to another group to proceed.</p>" &
+                    "<p>" & safeStudentFull & " <strong>IS NOT</strong> to attend in their current group until they have received a confirmation email for their new group allocation.</p>" &
+                    "<p><strong>Reason for re-allocation:</strong></p>" &
+                    "<p>[Enter reason here]</p>"
+
+            Case Else
+                Return greeting &
+                    "<p>Please be advised that " & safeStudentFull & " will be re-allocated to another group to proceed.</p>" &
+                    "<p>" & safeStudentFull & " <strong>IS NOT</strong> to attend in their current group until they have received a confirmation email for their new group allocation.</p>"
+        End Select
+    End Function
+
+    Private Sub DisplayStudentReallocationOutlookDraft(toAddresses As String, ccAddresses As String, subject As String, htmlBody As String)
+        Dim outApp As Object = CreateObject("Outlook.Application")
+        Dim outMail As Object = outApp.CreateItem(0)
+        Try
+            With outMail
+                .To = toAddresses
+                .CC = ccAddresses
+                .Subject = subject
+                .Display()
+            End With
+
+            System.Windows.Forms.Application.DoEvents()
+            Dim outlookBody As String = TryCast(outMail.HTMLBody, String)
+            If String.IsNullOrWhiteSpace(outlookBody) Then
+                outMail.HTMLBody = htmlBody
+            Else
+                outMail.HTMLBody = htmlBody & outlookBody
+            End If
+        Finally
+            Marshal.ReleaseComObject(outMail)
+            Marshal.ReleaseComObject(outApp)
+        End Try
+    End Sub
+
     Private Sub Button12_Click(sender As Object, e As EventArgs) Handles Button12.Click
         Try
             If StudentCB.SelectedIndex < 0 OrElse StudentCB.SelectedItem Is Nothing OrElse String.IsNullOrWhiteSpace(StudentIDLBL.Text) Then
@@ -730,9 +875,10 @@ Public Class MainFrm
             }
             System.Diagnostics.Process.Start(psi)
 
-            ' Draft email: student + employer in To; Trades + electrotechnology admin in CC
+            ' Draft email: student + employer in To; Trades + admin in CC
             Dim studentEmail As String = If(StudentEmailLBL.Text, String.Empty).Trim()
             Dim employerEmail As String = If(EmployerEmailLBL.Text, String.Empty).Trim()
+
             Dim toAddresses As New StringBuilder()
             If Not String.IsNullOrWhiteSpace(studentEmail) Then
                 toAddresses.Append(studentEmail)
@@ -748,6 +894,8 @@ Public Class MainFrm
                 Return
             End If
 
+            Dim ccAddresses As String = "Trades@vu.edu.au;electrotechnology.admin@vu.edu.au"
+
             Dim studentFirst As String = If(StudentFirstnameLBL.Text, String.Empty).Trim()
             Dim studentLast As String = If(StudentSurnameLBL.Text, String.Empty).Trim()
             If String.Equals(studentFirst, "Student First Name", StringComparison.OrdinalIgnoreCase) Then studentFirst = String.Empty
@@ -757,7 +905,8 @@ Public Class MainFrm
 
             Dim employerFirst As String = If(EmployerFirstnameLBL.Text, String.Empty).Trim()
             Dim employerLast As String = If(EmployerSurnameLBL.Text, String.Empty).Trim()
-            If String.Equals(employerFirst, "Employer First Name", StringComparison.OrdinalIgnoreCase) Then employerFirst = String.Empty
+            If String.Equals(employerFirst, "Employer First Name", StringComparison.OrdinalIgnoreCase) OrElse
+               String.Equals(employerFirst, "Employer Firstname", StringComparison.OrdinalIgnoreCase) Then employerFirst = String.Empty
             If String.Equals(employerLast, "Employer Surname", StringComparison.OrdinalIgnoreCase) Then employerLast = String.Empty
             Dim employerName As String = ($"{employerFirst} {employerLast}").Trim()
             If String.IsNullOrWhiteSpace(employerName) Then
@@ -768,41 +917,21 @@ Public Class MainFrm
                 employerName = employerBusinessName
             End If
 
-            Dim greetingRecipients As String
-            If String.IsNullOrWhiteSpace(employerName) Then
-                greetingRecipients = studentFullName
-            Else
-                greetingRecipients = studentFullName & " and " & employerName
-            End If
-
             Dim safeStudentFull As String = WebUtility.HtmlEncode(studentFullName)
-            Dim safeGreetingRecipients As String = WebUtility.HtmlEncode(greetingRecipients)
+            Dim safeEmployerName As String = WebUtility.HtmlEncode(employerName)
 
-            Dim htmlBody As String =
-                "<p>Hello " & safeGreetingRecipients & ",</p>" &
-                "<p>Please be advised that <strong>" & safeStudentFull & "</strong> has been re-allocated to a different class within the Electrotechnology program. " &
-                "<strong>" & safeStudentFull & "</strong> must <strong>not</strong> attend further sessions under the previous class allocation until formal confirmation or further notice is provided by Victoria University.</p>" &
-                "<p>If you have any questions, please reply to this email.</p>" &
-                "<p>Thank you for your cooperation.</p>"
-
-            Dim OutApp As Object = CreateObject("Outlook.Application")
-            Dim OutMail As Object = OutApp.CreateItem(0)
-            With OutMail
-                .To = toAddresses.ToString()
-                .CC = "Trades@vu.edu.au;electrotechnology.admin@vu.edu.au"
-                .Subject = "Student Class Re-allocation"
-                ' Show the inspector first so Outlook injects this account's default signature (not the app DB image).
-                .Display()
-            End With
-
-            ' Allow Outlook to populate HTMLBody with the user's signature, then prepend our message.
-            System.Windows.Forms.Application.DoEvents()
-            Dim outlookBody As String = TryCast(OutMail.HTMLBody, String)
-            If String.IsNullOrWhiteSpace(outlookBody) Then
-                OutMail.HTMLBody = htmlBody
-            Else
-                OutMail.HTMLBody = htmlBody & outlookBody
+            Dim selectedTemplate As Nullable(Of StudentReallocationEmailTemplate) = PromptStudentReallocationEmailTemplate()
+            If Not selectedTemplate.HasValue Then
+                Return
             End If
+
+            Dim htmlBody As String = BuildStudentReallocationEmailHtml(
+                selectedTemplate.Value,
+                safeStudentFull,
+                safeEmployerName)
+            Dim subject As String = BuildStudentReallocationEmailSubject(selectedTemplate.Value)
+
+            DisplayStudentReallocationOutlookDraft(toAddresses.ToString(), ccAddresses, subject, htmlBody)
         Catch ex As System.Exception
             MessageBox.Show("Could not complete the re-allocation request (form and/or email)." & vbCrLf & ex.Message, "Student Re-Allocation Request", MessageBoxButtons.OK, MessageBoxIcon.Error)
         End Try
@@ -1599,7 +1728,7 @@ Public Class MainFrm
 
         ' SQL query to retrieve student and employer information based on the selected student
         Dim query As String = "SELECT [Student ID], [Student Given Name], [Student Family Name], [Student Personal Email], " &
-                      "[Employer Given Name], [Employer Name], [Employer Email], [Block Group Code], [Student Personal Mobile], [Apprenticeship Client ID]" &
+                      "[Employer Given Name], [Employer Surname], [Employer Name], [Employer Email], [Block Group Code], [Student Personal Mobile], [Apprenticeship Client ID]" &
                       " FROM ElectrotechnologyReports.dbo.AgreementsDetails WHERE [Student ID] = @StudentID"
 
         ' Create a SqlCommand object with the query and connection
@@ -1618,17 +1747,18 @@ Public Class MainFrm
                     StudentSurnameLBL.Text = If(Not reader.IsDBNull(2), reader.GetString(2), "")
                     StudentEmailLBL.Text = If(Not reader.IsDBNull(3), reader.GetString(3), "")
                     EmployerFirstnameLBL.Text = If(Not reader.IsDBNull(4), reader.GetString(4), "")
-                    EmployerBusinessNameLBL.Text = If(Not reader.IsDBNull(5), reader.GetString(5), "")
-                    EmployerEmailLBL.Text = If(Not reader.IsDBNull(6), reader.GetString(6), "")
-                    BlockGroupLBL.Text = If(Not reader.IsDBNull(7), reader.GetString(7), "")
-                    Dim mobileNumber As String = If(Not reader.IsDBNull(8), reader.GetDouble(8).ToString(), "")
+                    EmployerSurnameLBL.Text = If(Not reader.IsDBNull(5), reader.GetString(5), "")
+                    EmployerBusinessNameLBL.Text = If(Not reader.IsDBNull(6), reader.GetString(6), "")
+                    EmployerEmailLBL.Text = If(Not reader.IsDBNull(7), reader.GetString(7), "")
+                    BlockGroupLBL.Text = If(Not reader.IsDBNull(8), reader.GetString(8), "")
+                    Dim mobileNumber As String = If(Not reader.IsDBNull(9), reader.GetDouble(9).ToString(), "")
                     ' Check if the string represents a mobile number (assuming a mobile number has 10 digits)
                     If mobileNumber.Length = 9 AndAlso mobileNumber.All(Function(c) Char.IsDigit(c)) Then
                         mobileNumber = "0" & mobileNumber ' Add "0" in front of the mobile number
                     End If
                     Label29.Text = mobileNumber
 
-                    Label34.Text = If(Not reader.IsDBNull(9), reader.GetString(9), "")
+                    Label34.Text = If(Not reader.IsDBNull(10), reader.GetString(10), "")
                     '-----------------------------------------------------------------
                     'Enable once Address field is in SQL database, dont forget to add [Address] in the query field
                     'Label28.Text = If(Not reader.IsDBNull(10), reader.GetString(10), "")
@@ -1807,6 +1937,87 @@ Public Class MainFrm
         Return Nothing
     End Function
 
+    Private Function PromptAppTrainNotified() As Boolean
+        Return MessageBox.Show(
+            AppTrainNotifiedPrompt,
+            "App-Train notification",
+            MessageBoxButtons.YesNo,
+            MessageBoxIcon.Question) = DialogResult.Yes
+    End Function
+
+    Private Function EmploymentDetailValue(value As String) As String
+        Dim trimmed As String = If(value, String.Empty).Trim()
+        If String.IsNullOrWhiteSpace(trimmed) Then Return "Not available"
+        Return trimmed
+    End Function
+
+    Private Function BuildAppTrainUnemploymentNotificationBody(unemploymentDate As Date) As String
+        Dim body As New StringBuilder()
+        body.AppendLine("Hello App-Train,")
+        body.AppendLine()
+        body.AppendLine("Please be advised that the following student has declared they are no longer employed.")
+        body.AppendLine()
+        body.AppendLine("Date student declared no longer employed: " & unemploymentDate.ToString("dd/MM/yyyy"))
+        body.AppendLine()
+        body.AppendLine("Student details:")
+        body.AppendLine("Student ID: " & EmploymentDetailValue(StudentIDLBL.Text))
+        body.AppendLine("First name: " & EmploymentDetailValue(StudentFirstnameLBL.Text))
+        body.AppendLine("Surname: " & EmploymentDetailValue(StudentSurnameLBL.Text))
+        body.AppendLine("Personal email: " & EmploymentDetailValue(StudentEmailLBL.Text))
+        body.AppendLine("Mobile: " & EmploymentDetailValue(Label29.Text))
+        body.AppendLine("Block group: " & EmploymentDetailValue(BlockGroupLBL.Text))
+        body.AppendLine("Apprenticeship Client ID: " & EmploymentDetailValue(Label34.Text))
+        body.AppendLine("Address: " & EmploymentDetailValue(Label28.Text))
+        body.AppendLine()
+        body.AppendLine("Employer details:")
+        body.AppendLine("Employer given name: " & EmploymentDetailValue(EmployerFirstnameLBL.Text))
+        body.AppendLine("Employer surname: " & EmploymentDetailValue(EmployerSurnameLBL.Text))
+        body.AppendLine("Employer / business name: " & EmploymentDetailValue(EmployerBusinessNameLBL.Text))
+        body.AppendLine("Employer email: " & EmploymentDetailValue(EmployerEmailLBL.Text))
+        Return body.ToString().Replace(Environment.NewLine, "<BR>")
+    End Function
+
+    Private Sub DisplayAppTrainUnemploymentNotificationEmail(unemploymentDate As Date)
+        Dim adminEmail As String = Nothing
+        Dim apptrainEmail As String = Nothing
+        Dim frankOffer As String = Nothing
+        Dim trades As String = Nothing
+        SendOutlookEmail.GetEmailAddresses(adminEmail, apptrainEmail, frankOffer, trades)
+
+        If String.IsNullOrWhiteSpace(apptrainEmail) Then
+            MessageBox.Show(
+                "App-Train email address is not configured in Settings (EmailSettings / Apptrain).",
+                "App-Train notification",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning)
+            Return
+        End If
+
+        Dim imageData As Byte() = RetrieveImageDataFromDatabase()
+        Dim subject As String =
+            EmploymentDetailValue(StudentIDLBL.Text) & " - " &
+            EmploymentDetailValue(StudentFirstnameLBL.Text) & " " &
+            EmploymentDetailValue(StudentSurnameLBL.Text) &
+            " - Declared no longer employed as of " & unemploymentDate.ToString("dd/MM/yyyy")
+        Dim bodyHtml As String = BuildAppTrainUnemploymentNotificationBody(unemploymentDate)
+
+        Dim outApp As Object = CreateObject("Outlook.Application")
+        Dim outMail As Object = outApp.CreateItem(0)
+        Try
+            With outMail
+                .To = apptrainEmail
+                .Subject = subject
+                .HTMLbody = bodyHtml &
+                    "<br><br><br><br><img src='data:image/jpeg;base64," & Convert.ToBase64String(imageData) & "' width='90%'> " &
+                    VersionLBL.Text
+                .Display()
+            End With
+        Finally
+            Marshal.ReleaseComObject(outMail)
+            Marshal.ReleaseComObject(outApp)
+        End Try
+    End Sub
+
     Private Sub SaveEmploymentStatus(employmentStatus As String, unemploymentDate As Nullable(Of Date))
         Dim sid As String = CurrentStudentIdForEmploymentLookup()
         If String.IsNullOrWhiteSpace(sid) Then Return
@@ -1864,10 +2075,16 @@ Public Class MainFrm
                     Return
                 End If
 
+                Dim appTrainNotified As Boolean = PromptAppTrainNotified()
+
                 SetEmploymentCheckboxesChecked(True, False)
                 SaveEmploymentStatus(EmploymentStatusUnemployed, pickedDate.Value)
                 ApplyEmploymentStatusVisuals(True, pickedDate.Value)
                 ApplyEmploymentSubmitButtonVisibility()
+
+                If Not appTrainNotified Then
+                    DisplayAppTrainUnemploymentNotificationEmail(pickedDate.Value)
+                End If
             Else
                 Dim confirmUncheck As DialogResult = MessageBox.Show(
                     UnemployedUncheckPrompt,

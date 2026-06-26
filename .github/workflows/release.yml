@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Optional explicit release version in vX.Y format (example: v3.1)'
+        description: 'Optional explicit release version in vX.Y format (example: v3.2)'
         required: false
       force_update:
         description: 'Set to true for mandatory update behavior'
@@ -22,7 +22,7 @@ on:
           - "false"
           - "true"
       min_required_tag:
-        description: 'Optional minimum client version in vX.Y format (example: v3.1)'
+        description: 'Optional minimum client version in vX.Y format (example: v3.2)'
         required: false
         default: ""
       asset_name:
@@ -107,7 +107,7 @@ jobs:
           $provided = "${{ github.event.inputs.version }}".Trim()
           if ($provided) {
             if ($provided -notmatch '^v\d+\.\d+$') {
-              throw "Manual version must match vX.Y (example: v3.1)."
+              throw "Manual version must match vX.Y (example: v3.2)."
             }
             $tag = $provided
           } else {
@@ -152,7 +152,7 @@ jobs:
 
           $minRequiredTag = "$env:MIN_REQUIRED_TAG_INPUT".Trim()
           if ($minRequiredTag -and $minRequiredTag -notmatch '^v\d+\.\d+$') {
-            throw "min_required_tag must match vX.Y (example: v3.1)."
+            throw "min_required_tag must match vX.Y (example: v3.2)."
           }
 
           $assetName = "$env:ASSET_NAME_INPUT".Trim()
