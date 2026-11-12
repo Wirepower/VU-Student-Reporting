@@ -105,7 +105,7 @@ Create these lists (names may be prefixed, e.g. `SAR_StudentLogs`, but keep stab
 
 **Key:** `Student ID`
 
-**Attendance:** `Absent`, `Late Arrival`, `Early Departure`, `Yearly_Absent`, `Yearly_Late_Arrival`, `Yearly_Early_Departure` (integers; increments on notices; reset to 0 on Term/Yearly report send)
+**Attendance:** `Absent`, `Late Arrival`, `Early Departure`, `Yearly_Absent`, `Yearly_Late_Arrival`, `Yearly_Early_Departure` (integers). Notices increment both term and yearly fields. **Term/Yearly report send resets only** `Absent`, `Late Arrival`, `Early Departure` to 0 — **do not clear `Yearly_*` there**. Yearly counters are reset only via Owner housekeeping (“Reset Yearly Logs”).
 
 **Reporting / AppTrain:** `LastStudentReportDate`, `Apptrain-Studentbeenemailed`, `AppTrain-Haveyourangstudents`, `AppTrain-OtherFormofcontact`, `AppTrain-OtherText`, `StudentAddress`
 
